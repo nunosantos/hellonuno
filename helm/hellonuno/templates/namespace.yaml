@@ -1,6 +1,8 @@
+{{- if .Values.global.createNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Values.global.namespace }}
   labels:
     {{- include "hellonuno.labels" . | nindent 4 }}
+{{- end }}

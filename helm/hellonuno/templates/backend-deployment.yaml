@@ -43,9 +43,14 @@ spec:
             initialDelaySeconds: {{ .Values.backend.probes.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.backend.probes.readiness.periodSeconds }}
           securityContext:
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
+            runAsNonRoot: {{ .Values.backend.securityContext.runAsNonRoot }}
+            runAsUser: {{ .Values.backend.securityContext.runAsUser }}
+            allowPrivilegeEscalation: {{ .Values.backend.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.backend.securityContext.readOnlyRootFilesystem }}
             capabilities:
               drop:
                 - ALL
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault

@@ -4,6 +4,7 @@
 # Global settings
 global:
   namespace: hellonuno
+  createNamespace: false  # Set to true if namespace doesn't exist
 
 # Backend configuration
 backend:
@@ -11,7 +12,7 @@ backend:
   replicaCount: 2
 
   image:
-    repository: hellonuno-backend
+    repository: localhost/hellonuno-backend
     tag: latest
     pullPolicy: IfNotPresent
 
@@ -41,20 +42,26 @@ backend:
       initialDelaySeconds: 5
       periodSeconds: 5
 
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+
 # Frontend configuration
 frontend:
   name: hellonuno-frontend
   replicaCount: 2
 
   image:
-    repository: hellonuno-frontend
+    repository: localhost/hellonuno-frontend
     tag: latest
     pullPolicy: IfNotPresent
 
   service:
     type: ClusterIP
     port: 80
-    targetPort: 80
+    targetPort: 8080
 
   resources:
     requests:
@@ -73,6 +80,12 @@ frontend:
       path: /
       initialDelaySeconds: 5
       periodSeconds: 5
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
 
 # Ingress configuration
 ingress:

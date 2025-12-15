@@ -38,7 +38,24 @@ spec:
             initialDelaySeconds: {{ .Values.frontend.probes.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.frontend.probes.readiness.periodSeconds }}
           securityContext:
-            allowPrivilegeEscalation: false
+            runAsNonRoot: {{ .Values.frontend.securityContext.runAsNonRoot }}
+            runAsUser: {{ .Values.frontend.securityContext.runAsUser }}
+            allowPrivilegeEscalation: {{ .Values.frontend.securityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.frontend.securityContext.readOnlyRootFilesystem }}
             capabilities:
               drop:
                 - ALL
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
