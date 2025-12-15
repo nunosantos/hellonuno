@@ -4,7 +4,7 @@
 # Global settings
 global:
   namespace: hellonuno
-  createNamespace: false  # Set to true if namespace doesn't exist
+  createNamespace: true  # ArgoCD will manage namespace creation
 
 # Backend configuration
 backend:
