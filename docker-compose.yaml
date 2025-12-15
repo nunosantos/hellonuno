@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./hellonuno-backend
+      dockerfile: Dockerfile
+    image: hellonuno-backend:latest
+    container_name: hellonuno-backend
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - hellonuno-network
+
+  frontend:
+    build:
+      context: ./hellonuno-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:5000
+    image: hellonuno-frontend:latest
+    container_name: hellonuno-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - hellonuno-network
+
+networks:
+  hellonuno-network:
+    driver: bridge

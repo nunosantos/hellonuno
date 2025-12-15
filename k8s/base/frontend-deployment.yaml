@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hellonuno-frontend
+  namespace: hellonuno
+  labels:
+    app: hellonuno-frontend
+    app.kubernetes.io/name: hellonuno-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: hellonuno
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hellonuno-frontend
+  template:
+    metadata:
+      labels:
+        app: hellonuno-frontend
+        app.kubernetes.io/name: hellonuno-frontend
+        app.kubernetes.io/component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: localhost/hellonuno-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}

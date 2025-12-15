@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hellonuno-backend
+  namespace: hellonuno
+  labels:
+    app: hellonuno-backend
+    app.kubernetes.io/name: hellonuno-backend
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: hellonuno
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hellonuno-backend
+  template:
+    metadata:
+      labels:
+        app: hellonuno-backend
+        app.kubernetes.io/name: hellonuno-backend
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: backend
+          image: localhost/hellonuno-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Production"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault

@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hellonuno-ingress
+  namespace: hellonuno
+  labels:
+    app.kubernetes.io/name: hellonuno-ingress
+    app.kubernetes.io/part-of: hellonuno
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: hellonuno.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hellonuno-frontend
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: hellonuno-backend
+                port:
+                  number: 80
