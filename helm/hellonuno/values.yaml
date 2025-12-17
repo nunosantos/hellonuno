@@ -48,6 +48,12 @@ backend:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
 
+  serviceAccount:
+    name: hellonuno-backend-sa
+
+  rbac:
+    enabled: true
+
 # Frontend configuration
 frontend:
   name: hellonuno-frontend

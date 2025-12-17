@@ -1,3 +1,6 @@
+using k8s;
+using k8s.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
@@ -11,6 +14,15 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
+});
+
+// Add Kubernetes client
+builder.Services.AddSingleton<IKubernetes>(sp =>
+{
+    var config = KubernetesClientConfiguration.IsInCluster() 
+        ? KubernetesClientConfiguration.InClusterConfig() 
+        : KubernetesClientConfiguration.BuildDefaultConfig();
+    return new Kubernetes(config);
 });
 
 var app = builder.Build();
@@ -144,6 +156,63 @@ app.MapGet("/api/cluster", () =>
     return Results.Ok(clusterInfo);
 })
 .WithName("GetClusterInfo")
+.WithOpenApi();
+
+// Get all pods in the namespace with metrics
+app.MapGet("/api/pods", async (IKubernetes k8s) => 
+{
+    try
+    {
+        var namespaceName = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "hellonuno";
+        var pods = await k8s.CoreV1.ListNamespacedPodAsync(namespaceName);
+        
+        var podMetrics = pods.Items.Select(pod => new
+        {
+            name = pod.Metadata.Name,
+            @namespace = pod.Metadata.NamespaceProperty,
+            nodeName = pod.Spec.NodeName,
+            podIP = pod.Status.PodIP,
+            phase = pod.Status.Phase,
+            startTime = pod.Status.StartTime,
+            containerStatuses = pod.Status.ContainerStatuses?.Select(cs => new
+            {
+                name = cs.Name,
+                image = cs.Image,
+                ready = cs.Ready,
+                restartCount = cs.RestartCount,
+                state = cs.State.Running != null ? "Running" : 
+                        cs.State.Waiting != null ? "Waiting" : 
+                        cs.State.Terminated != null ? "Terminated" : "Unknown"
+            }).ToList(),
+            labels = pod.Metadata.Labels,
+            conditions = pod.Status.Conditions?.Select(c => new
+            {
+                type = c.Type,
+                status = c.Status,
+                reason = c.Reason,
+                message = c.Message
+            }).ToList()
+        }).ToList();
+
+        return Results.Ok(new
+        {
+            @namespace = namespaceName,
+            totalPods = pods.Items.Count,
+            pods = podMetrics,
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            error = "Failed to query Kubernetes API",
+            message = ex.Message,
+            hint = "Ensure the service account has proper RBAC permissions to list pods"
+        }, statusCode: 500);
+    }
+})
+.WithName("GetAllPods")
 .WithOpenApi();
 
 app.Run();
