@@ -282,6 +282,110 @@ app.MapGet("/api/github/deployment", async () =>
 .WithName("GetGitHubDeploymentInfo")
 .WithOpenApi();
 
+// Get comprehensive service status (GitHub + K8s + Deployment metadata)
+app.MapGet("/api/services", async (IKubernetes k8s) => 
+{
+    try
+    {
+        var namespaceName = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "hellonuno";
+        
+        // Get all pods
+        var pods = await k8s.CoreV1.ListNamespacedPodAsync(namespaceName);
+        
+        // Group pods by service
+        var backendPods = pods.Items.Where(p => p.Metadata.Labels?.ContainsKey("app") == true && 
+                                                  p.Metadata.Labels["app"].Contains("backend")).ToList();
+        var frontendPods = pods.Items.Where(p => p.Metadata.Labels?.ContainsKey("app") == true && 
+                                                   p.Metadata.Labels["app"].Contains("frontend")).ToList();
+
+        // Helper function to extract service info
+        var getServiceInfo = (List<V1Pod> servicePods, string serviceName, string repoPath) => {
+            var firstPod = servicePods.FirstOrDefault();
+            var gitCommit = firstPod?.Metadata?.Annotations?.ContainsKey("git.commit.sha") == true 
+                ? firstPod.Metadata.Annotations["git.commit.sha"] 
+                : "unknown";
+            var gitBranch = firstPod?.Metadata?.Annotations?.ContainsKey("git.branch") == true 
+                ? firstPod.Metadata.Annotations["git.branch"] 
+                : "unknown";
+            var deployedAt = firstPod?.Metadata?.Annotations?.ContainsKey("deployed.at") == true 
+                ? firstPod.Metadata.Annotations["deployed.at"] 
+                : "unknown";
+            var deployedBy = firstPod?.Metadata?.Annotations?.ContainsKey("deployed.by") == true 
+                ? firstPod.Metadata.Annotations["deployed.by"] 
+                : "unknown";
+
+            var healthyPods = servicePods.Count(p => p.Status.Phase == "Running" && 
+                                                      p.Status.ContainerStatuses?.All(cs => cs.Ready) == true);
+            
+            return new {
+                name = serviceName,
+                github = new {
+                    commit = gitCommit,
+                    commitShort = gitCommit.Length > 7 ? gitCommit.Substring(0, 7) : gitCommit,
+                    branch = gitBranch,
+                    repository = $"https://github.com/nunosantos/hellonuno/tree/{gitBranch}/{repoPath}",
+                    commitUrl = $"https://github.com/nunosantos/hellonuno/commit/{gitCommit}"
+                },
+                deployment = new {
+                    status = healthyPods == servicePods.Count ? "Healthy" : "Degraded",
+                    deployedAt = deployedAt,
+                    deployedBy = deployedBy,
+                    version = gitCommit.Length > 7 ? gitCommit.Substring(0, 7) : gitCommit
+                },
+                kubernetes = new {
+                    podsReady = $"{healthyPods}/{servicePods.Count}",
+                    totalPods = servicePods.Count,
+                    healthyPods = healthyPods,
+                    pods = servicePods.Select(pod => new {
+                        name = pod.Metadata.Name,
+                        nodeName = pod.Spec.NodeName,
+                        podIP = pod.Status.PodIP,
+                        phase = pod.Status.Phase,
+                        ready = pod.Status.ContainerStatuses?.All(cs => cs.Ready) == true,
+                        restartCount = pod.Status.ContainerStatuses?.Sum(cs => cs.RestartCount) ?? 0,
+                        startTime = pod.Status.StartTime,
+                        image = pod.Status.ContainerStatuses?.FirstOrDefault()?.Image
+                    }).ToList()
+                },
+                observability = new {
+                    metrics = $"https://grafana.local/d/service-{serviceName}",
+                    logs = $"https://kibana.local/app/logs?service={serviceName}",
+                    traces = $"https://jaeger.local/search?service={serviceName}",
+                    apm = $"https://apm.local/services/{serviceName}"
+                },
+                documentation = new {
+                    api = $"https://github.com/nunosantos/hellonuno/blob/{gitBranch}/{repoPath}/README.md",
+                    readme = $"https://github.com/nunosantos/hellonuno/blob/{gitBranch}/{repoPath}/README.md",
+                    runbook = $"https://github.com/nunosantos/hellonuno/wiki/{serviceName}-Runbook",
+                    swagger = serviceName == "backend" ? "/swagger" : null
+                }
+            };
+        };
+
+        var services = new List<object> {
+            getServiceInfo(backendPods, "backend", "hellonuno-backend"),
+            getServiceInfo(frontendPods, "frontend", "hellonuno-frontend")
+        };
+
+        return Results.Ok(new {
+            @namespace = namespaceName,
+            environment = app.Environment.EnvironmentName,
+            totalServices = services.Count,
+            services = services,
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new {
+            error = "Failed to aggregate service information",
+            message = ex.Message
+        }, statusCode: 500);
+    }
+})
+.WithName("GetServicesOverview")
+.WithOpenApi();
+
 app.Run();
 
 record HelloResponse(string Message, DateTime Timestamp, string ServerName);

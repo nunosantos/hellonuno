@@ -40,6 +40,60 @@ interface SystemInfo {
   timestamp: string
 }
 
+interface ServiceOverview {
+  namespace: string
+  environment: string
+  totalServices: number
+  services: Service[]
+  timestamp: string
+}
+
+interface Service {
+  name: string
+  github: {
+    commit: string
+    commitShort: string
+    branch: string
+    repository: string
+    commitUrl: string
+  }
+  deployment: {
+    status: string
+    deployedAt: string
+    deployedBy: string
+    version: string
+  }
+  kubernetes: {
+    podsReady: string
+    totalPods: number
+    healthyPods: number
+    pods: PodInfo[]
+  }
+  observability: {
+    metrics: string
+    logs: string
+    traces: string
+    apm: string
+  }
+  documentation: {
+    api: string
+    readme: string
+    runbook: string
+    swagger: string | null
+  }
+}
+
+interface PodInfo {
+  name: string
+  nodeName: string
+  podIP: string
+  phase: string
+  ready: boolean
+  restartCount: number
+  startTime: string
+  image: string
+}
+
 interface ClusterInfo {
   cluster: {
     name: string
@@ -71,6 +125,7 @@ function App() {
   const [greeting, setGreeting] = useState<HelloResponse | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [clusterInfo, setClusterInfo] = useState<ClusterInfo | null>(null)
+  const [servicesOverview, setServicesOverview] = useState<ServiceOverview | null>(null)
   const [customName, setCustomName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -118,10 +173,22 @@ function App() {
     }
   }
 
+  const fetchServicesOverview = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/services`)
+      if (!response.ok) throw new Error('Failed to fetch services overview')
+      const data = await response.json()
+      setServicesOverview(data)
+    } catch (err) {
+      console.error('Could not fetch services overview:', err)
+    }
+  }
+
   useEffect(() => {
     fetchGreeting()
     fetchSystemInfo()
     fetchClusterInfo()
+    fetchServicesOverview()
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -761,4 +828,4 @@ function App() {
 }
 
 export default App
-// Build timestamp: 1765973475
+// Build timestamp: 1765973748
