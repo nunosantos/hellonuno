@@ -13,7 +13,7 @@ backend:
 
   image:
     repository: ghcr.io/nunosantos/hellonuno/backend
-    tag: master-dcfa61a
+    tag: master-5fda64c
     pullPolicy: Always
 
   service:
@@ -61,7 +61,7 @@ frontend:
 
   image:
     repository: ghcr.io/nunosantos/hellonuno/frontend
-    tag: master-dcfa61a
+    tag: master-5fda64c
     pullPolicy: Always
 
   service:
@@ -122,7 +122,7 @@ imagePullSecrets: []
 # Deployment metadata (populated by CI/CD)
 deployment:
   git:
-    commitSha: "dcfa61afcc7e7cabac17a2b7165188b9c47b01c6"
+    commitSha: "5fda64c6d3f60069d0be4d6b073534a6796b19ab"
     branch: "master"
-  timestamp: "2025-12-17T20:06:48Z"
+  timestamp: "2025-12-17T20:19:32Z"
   actor: "nunosantos"
