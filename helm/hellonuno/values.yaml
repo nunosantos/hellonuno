@@ -13,7 +13,7 @@ backend:
 
   image:
     repository: ghcr.io/nunosantos/hellonuno/backend
-    tag: latest
+    tag: master-1a61d22
     pullPolicy: Always
 
   service:
@@ -55,7 +55,7 @@ frontend:
 
   image:
     repository: ghcr.io/nunosantos/hellonuno/frontend
-    tag: latest
+    tag: master-1a61d22
     pullPolicy: Always
 
   service:
