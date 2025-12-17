@@ -122,7 +122,7 @@ imagePullSecrets: []
 # Deployment metadata (populated by CI/CD)
 deployment:
   git:
-    commitSha: "839dca5d0599d8ca27486b24a6e3a5466136d5c8"
+    commitSha: "3f2af107bc406184f8994aceb3eee282cdc331e9"
     branch: "master"
-  timestamp: "2025-12-17T13:02:10Z"
+  timestamp: "2025-12-17T13:10:41Z"
   actor: "nunosantos"
