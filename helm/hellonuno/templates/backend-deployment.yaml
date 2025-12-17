@@ -48,6 +48,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           livenessProbe:

@@ -13,16 +13,28 @@ interface SystemInfo {
     namespace: string
     serviceAccount: string
     nodeName: string
+    podIp: string
+  }
+  resources: {
+    memoryUsageMB: number
+    cpuCores: number
+    threadCount: number
+    gcMemoryMB: number
+    gen0Collections: number
+    gen1Collections: number
+    gen2Collections: number
   }
   platform: {
     os: string
     architecture: string
     runtime: string
-    processorCount: number
   }
-  application: {
-    version: string
+  health: {
+    status: string
     uptime: string
+    uptimeSeconds: number
+    processId: number
+    startTime: string
     environment: string
   }
   timestamp: string
@@ -335,13 +347,12 @@ function App() {
                   <div className="info-card">
                     <div className="info-icon">
                       <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2"/>
-                        <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M8 2H16C17.1 2 18 2.9 18 4V8M16 22H8C6.9 22 6 21.1 6 20V8M6 8H18" stroke="currentColor" strokeWidth="2"/>
                       </svg>
                     </div>
                     <div className="info-content">
-                      <span className="info-label">Service Account</span>
-                      <span className="info-value">{systemInfo.pod.serviceAccount}</span>
+                      <span className="info-label">Pod IP</span>
+                      <span className="info-value">{systemInfo.pod.podIp}</span>
                     </div>
                   </div>
                 </div>
@@ -353,7 +364,7 @@ function App() {
                     <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
                     <path d="M8 21H16M12 17V21" stroke="currentColor" strokeWidth="2"/>
                   </svg>
-                  Platform Details
+                  Resource Usage
                 </h3>
                 <div className="info-cards">
                   <div className="info-card">
@@ -364,8 +375,8 @@ function App() {
                       </svg>
                     </div>
                     <div className="info-content">
-                      <span className="info-label">Operating System</span>
-                      <span className="info-value">{systemInfo.platform.os}</span>
+                      <span className="info-label">Memory Usage</span>
+                      <span className="info-value">{systemInfo.resources.memoryUsageMB.toFixed(2)} MB</span>
                     </div>
                   </div>
 
@@ -377,8 +388,8 @@ function App() {
                       </svg>
                     </div>
                     <div className="info-content">
-                      <span className="info-label">Architecture</span>
-                      <span className="info-value">{systemInfo.platform.architecture}</span>
+                      <span className="info-label">GC Memory</span>
+                      <span className="info-value">{systemInfo.resources.gcMemoryMB.toFixed(2)} MB</span>
                     </div>
                   </div>
 
@@ -390,8 +401,8 @@ function App() {
                       </svg>
                     </div>
                     <div className="info-content">
-                      <span className="info-label">Runtime</span>
-                      <span className="info-value">{systemInfo.platform.runtime}</span>
+                      <span className="info-label">Thread Count</span>
+                      <span className="info-value">{systemInfo.resources.threadCount}</span>
                     </div>
                   </div>
 
@@ -404,7 +415,19 @@ function App() {
                     </div>
                     <div className="info-content">
                       <span className="info-label">CPU Cores</span>
-                      <span className="info-value">{systemInfo.platform.processorCount}</span>
+                      <span className="info-value">{systemInfo.resources.cpuCores}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M19 21V5C19 3.89 18.1 3 17 3H7C5.89 3 5 3.89 5 5V21L12 18L19 21Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">GC Collections</span>
+                      <span className="info-value">G0: {systemInfo.resources.gen0Collections} | G1: {systemInfo.resources.gen1Collections} | G2: {systemInfo.resources.gen2Collections}</span>
                     </div>
                   </div>
                 </div>
@@ -413,21 +436,21 @@ function App() {
               <div className="info-section">
                 <h3 className="info-section-title">
                   <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
                   </svg>
-                  Application Status
+                  Health & Status
                 </h3>
                 <div className="info-cards">
                   <div className="info-card">
                     <div className="info-icon">
                       <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M7 7H17V17H7V7Z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M3 3H21V21H3V3Z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" strokeWidth="2"/>
                       </svg>
                     </div>
                     <div className="info-content">
-                      <span className="info-label">Version</span>
-                      <span className="info-value">{systemInfo.application.version}</span>
+                      <span className="info-label">Status</span>
+                      <span className="info-value" style={{color: '#10b981'}}>{systemInfo.health.status}</span>
                     </div>
                   </div>
 
@@ -440,20 +463,32 @@ function App() {
                     </div>
                     <div className="info-content">
                       <span className="info-label">Uptime</span>
-                      <span className="info-value">{systemInfo.application.uptime}</span>
+                      <span className="info-value">{systemInfo.health.uptime}</span>
                     </div>
                   </div>
 
                   <div className="info-card">
                     <div className="info-icon">
                       <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 8V12L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
                       </svg>
                     </div>
                     <div className="info-content">
                       <span className="info-label">Environment</span>
-                      <span className="info-value">{systemInfo.application.environment}</span>
+                      <span className="info-value">{systemInfo.health.environment}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M9 9H15V15H9V9Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Process ID</span>
+                      <span className="info-value">{systemInfo.health.processId}</span>
                     </div>
                   </div>
 
@@ -465,8 +500,22 @@ function App() {
                       </svg>
                     </div>
                     <div className="info-content">
-                      <span className="info-label">Last Updated</span>
-                      <span className="info-value">{new Date(systemInfo.timestamp).toLocaleString()}</span>
+                      <span className="info-label">Start Time</span>
+                      <span className="info-value">{new Date(systemInfo.health.startTime).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Platform</span>
+                      <span className="info-value">{systemInfo.platform.architecture} / {systemInfo.platform.runtime}</span>
                     </div>
                   </div>
                 </div>
@@ -530,4 +579,4 @@ function App() {
 }
 
 export default App
-// Build timestamp: 1765972440
+// Build timestamp: 1765973021

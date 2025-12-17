@@ -58,6 +58,9 @@ app.MapGet("/api/info", () => new BackendInfo(
 // Get Kubernetes system info (safe, non-sensitive data only)
 app.MapGet("/api/system", () => 
 {
+    var process = System.Diagnostics.Process.GetCurrentProcess();
+    var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
+    
     var systemInfo = new
     {
         pod = new
@@ -65,19 +68,32 @@ app.MapGet("/api/system", () =>
             name = Environment.GetEnvironmentVariable("HOSTNAME") ?? Environment.MachineName,
             @namespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "unknown",
             serviceAccount = Environment.GetEnvironmentVariable("SERVICE_ACCOUNT") ?? "default",
-            nodeName = Environment.GetEnvironmentVariable("NODE_NAME") ?? "unknown"
+            nodeName = Environment.GetEnvironmentVariable("NODE_NAME") ?? "unknown",
+            podIp = Environment.GetEnvironmentVariable("POD_IP") ?? "unknown"
+        },
+        resources = new
+        {
+            memoryUsageMB = process.WorkingSet64 / 1024.0 / 1024.0,
+            cpuCores = Environment.ProcessorCount,
+            threadCount = process.Threads.Count,
+            gcMemoryMB = GC.GetTotalMemory(false) / 1024.0 / 1024.0,
+            gen0Collections = GC.CollectionCount(0),
+            gen1Collections = GC.CollectionCount(1),
+            gen2Collections = GC.CollectionCount(2)
         },
         platform = new
         {
             os = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
             architecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
-            runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
-            processorCount = Environment.ProcessorCount
+            runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription
         },
-        application = new
+        health = new
         {
-            version = "1.0.0",
-            uptime = TimeSpan.FromMilliseconds(Environment.TickCount64).ToString(@"dd\.hh\:mm\:ss"),
+            status = "Healthy",
+            uptime = uptime.ToString(@"dd\.hh\:mm\:ss"),
+            uptimeSeconds = (long)uptime.TotalSeconds,
+            processId = process.Id,
+            startTime = process.StartTime.ToUniversalTime(),
             environment = app.Environment.EnvironmentName
         },
         timestamp = DateTime.UtcNow
