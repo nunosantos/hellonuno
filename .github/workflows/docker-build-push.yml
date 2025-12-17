@@ -275,13 +275,12 @@ jobs:
       - name: Update image tags in Helm values
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-
-          # Update backend image
-          sed -i "s|repository: localhost/hellonuno-backend|repository: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}|g" helm/hellonuno/values.yaml
-          sed -i "s|tag: latest|tag: master-${SHORT_SHA}|g" helm/hellonuno/values.yaml
-
-          # Update frontend image
-          sed -i "s|repository: localhost/hellonuno-frontend|repository: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}|g" helm/hellonuno/values.yaml
+          
+          # Update backend image tag
+          sed -i "s|tag: .*|tag: latest|g" helm/hellonuno/values.yaml
+          
+          # Verify changes
+          grep "tag:" helm/hellonuno/values.yaml
 
       - name: Commit and push if changed
         run: |
