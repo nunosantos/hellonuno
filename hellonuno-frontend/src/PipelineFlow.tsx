@@ -230,8 +230,8 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
     },
   ], [])
 
-  const [nodes] = useNodesState(initialNodes)
-  const [edges] = useEdgesState(initialEdges)
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
 
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     onNodeClick(node.id)
@@ -243,21 +243,23 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         proOptions={{ hideAttribution: true }}
-        nodesDraggable={false}
+        nodesDraggable={true}
         nodesConnectable={false}
         elementsSelectable={true}
-        panOnDrag={false}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
         zoomOnDoubleClick={false}
         preventScrolling={false}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(147, 51, 234, 0.15)" />
-        <Controls showZoom={false} showFitView={false} showInteractive={false} />
+        <Controls showZoom={true} showFitView={true} showInteractive={false} />
       </ReactFlow>
     </div>
   )
