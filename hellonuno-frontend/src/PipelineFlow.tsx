@@ -95,10 +95,26 @@ interface PipelineFlowProps {
     test: { status: string; passed: number; total: number; coverage: number | null }
     deploy: { syncStatus: string; healthStatus: string }
   } | null
+  devopsMetrics?: {
+    environments: Array<{
+      name: string
+      status: string
+      version: string
+      commitSha: string
+    }>
+  } | null
   onNodeClick: (nodeId: string) => void
 }
 
-export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNodeClick }: PipelineFlowProps) {
+export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, devopsMetrics, onNodeClick }: PipelineFlowProps) {
+  // Get environment status from devopsMetrics
+  const getEnvStatus = (envName: string): 'success' | 'failed' | 'idle' => {
+    if (!devopsMetrics?.environments) return 'idle'
+    const env = devopsMetrics.environments.find(e => e.name === envName)
+    if (!env) return 'idle'
+    return env.status === 'healthy' ? 'success' : 'failed'
+  }
+
   // Define nodes
   const initialNodes: Node<PipelineNodeData>[] = useMemo(() => [
     {
@@ -152,7 +168,7 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
       data: {
         label: 'RUNTIME',
         icon: '<svg viewBox="0 0 24 24" fill="none" width="28" height="28"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2"/></svg>',
-        status: systemInfo ? 'success' : 'failed',
+        status: systemInfo ? 'success' : getEnvStatus('DEV'),
         envBadge: 'DEV',
       },
     },
@@ -163,7 +179,7 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
       data: {
         label: 'RUNTIME',
         icon: '<svg viewBox="0 0 24 24" fill="none" width="28" height="28"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="2"/></svg>',
-        status: 'idle',
+        status: getEnvStatus('STAGING'),
         envBadge: 'STAGING',
       },
     },
@@ -174,11 +190,11 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
       data: {
         label: 'RUNTIME',
         icon: '<svg viewBox="0 0 24 24" fill="none" width="28" height="28"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2"/><path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2"/><path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2"/></svg>',
-        status: 'idle',
+        status: getEnvStatus('PROD'),
         envBadge: 'PROD',
       },
     },
-  ], [changelog, systemInfo, pipelineInfo])
+  ], [changelog, systemInfo, pipelineInfo, devopsMetrics])
 
   // Define edges
   const initialEdges: Edge[] = useMemo(() => [

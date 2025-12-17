@@ -162,12 +162,114 @@ interface PipelineInfo {
   timestamp: string
 }
 
+interface DevOpsMetrics {
+  dora: {
+    deploymentFrequency: { value: string; unit: string; trend: string; rating: string; description: string }
+    leadTimeForChanges: { value: string; unit: string; trend: string; rating: string; description: string }
+    changeFailureRate: { value: string; unit: string; trend: string; rating: string; description: string }
+    meanTimeToRecovery: { value: string; unit: string; trend: string; rating: string; description: string }
+  }
+  environments: Array<{
+    name: string
+    status: string
+    version: string
+    commitSha: string
+    deployedAt: string
+    deployedBy: string
+    replicas: { ready: number; desired: number }
+    canPromote: boolean
+    promoteTo: string | null
+  }>
+  versionDrift: {
+    devToStaging: { commits: number; behind: boolean }
+    stagingToProd: { commits: number; behind: boolean }
+    devToProd: { commits: number; behind: boolean }
+  }
+  deploymentHistory: Array<{
+    id: number
+    version: string
+    environment: string
+    status: string
+    deployedAt: string
+    deployedBy: string
+    duration: string
+    triggeredBy: string
+  }>
+  security: {
+    containerScan: {
+      status: string
+      lastScan: string
+      vulnerabilities: { critical: number; high: number; medium: number; low: number; total: number }
+      fixable: number
+    }
+    dependencyCheck: { status: string; outdated: number; vulnerabilities: number; lastCheck: string }
+    imageSigning: { signed: boolean; signedBy: string; verifiedAt: string }
+    sbom: { available: boolean; format: string; url: string }
+    compliance: { soc2: string; gdpr: string; hipaa: string }
+  }
+  alerts: Array<{
+    id: string
+    severity: string
+    title: string
+    message: string
+    source: string
+    environment: string
+    triggeredAt: string
+    acknowledged: boolean
+    url: string
+  }>
+  liveMetrics: {
+    requests: { total: number; rate: string; errors: number; errorRate: string }
+    latency: { p50: string; p95: string; p99: string }
+    resources: {
+      cpu: { current: string; limit: string; percentage: number }
+      memory: { current: string; limit: string; percentage: number }
+    }
+    pods: { ready: number; desired: number; restarts: number; oomKills: number }
+  }
+  pipelineInsights: {
+    avgBuildTime: string
+    avgTestTime: string
+    avgDeployTime: string
+    successRate: string
+    flakyTests: number
+    slowestStep: { name: string; duration: string }
+    queueTime: { avg: string; max: string }
+    lastWeekRuns: { total: number; success: number; failed: number; cancelled: number }
+  }
+  rollback: {
+    available: boolean
+    previousVersions: Array<{ version: string; deployedAt: string; status: string }>
+    lastRollback: object | null
+  }
+  gitops: {
+    tool: string
+    syncStatus: string
+    healthStatus: string
+    lastSync: string
+    autoSync: boolean
+    selfHeal: boolean
+    prune: boolean
+    repo: string
+    path: string
+    targetRevision: string
+  }
+  links: {
+    grafana: string
+    prometheus: string
+    argocd: string
+    alertmanager: string
+  }
+  timestamp: string
+}
+
 function App() {
   const [greeting, setGreeting] = useState<HelloResponse | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [clusterInfo, setClusterInfo] = useState<ClusterInfo | null>(null)
   const [changelog, setChangelog] = useState<Changelog | null>(null)
   const [pipelineInfo, setPipelineInfo] = useState<PipelineInfo | null>(null)
+  const [devopsMetrics, setDevopsMetrics] = useState<DevOpsMetrics | null>(null)
   const [customName, setCustomName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -243,6 +345,17 @@ function App() {
     }
   }
 
+  const fetchDevOpsMetrics = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/devops`)
+      if (!response.ok) throw new Error('Failed to fetch devops metrics')
+      const data = await response.json()
+      setDevopsMetrics(data)
+    } catch (err) {
+      console.error('Could not fetch devops metrics:', err)
+    }
+  }
+
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
@@ -253,6 +366,7 @@ function App() {
     fetchClusterInfo()
     fetchChangelog()
     fetchPipelineInfo()
+    fetchDevOpsMetrics()
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -308,6 +422,7 @@ function App() {
           changelog={changelog}
           systemInfo={systemInfo}
           pipelineInfo={pipelineInfo}
+          devopsMetrics={devopsMetrics}
           onNodeClick={(nodeId) => setSelectedStage(nodeId)}
         />
       </div>
@@ -695,16 +810,119 @@ function App() {
               </>
             )}
 
-            {/* Staging/Prod Runtime - Placeholder */}
-            {(selectedStage === 'runtime-staging' || selectedStage === 'runtime-prod') && (
+            {/* Staging/Prod Runtime - With DevOps Metrics */}
+            {(selectedStage === 'runtime-staging' || selectedStage === 'runtime-prod') && devopsMetrics && (
+              <>
+                {(() => {
+                  const envName = selectedStage === 'runtime-staging' ? 'STAGING' : 'PROD'
+                  const env = devopsMetrics.environments.find(e => e.name === envName)
+                  return env ? (
+                    <>
+                      <div className="panel-section">
+                        <h4>Environment: {envName}</h4>
+                        <div className="detail-grid">
+                          <div className="detail-item">
+                            <span className="label">Status:</span>
+                            <span className={`value badge ${env.status}`}>{env.status}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="label">Version:</span>
+                            <span className="value code">{env.version}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="label">Commit:</span>
+                            <span className="value code">{env.commitSha}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="label">Deployed:</span>
+                            <span className="value">{new Date(env.deployedAt).toLocaleString()}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="label">By:</span>
+                            <span className="value">{env.deployedBy}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="label">Replicas:</span>
+                            <span className="value">{env.replicas.ready}/{env.replicas.desired}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {env.canPromote && env.promoteTo && (
+                        <div className="panel-actions">
+                          <button className="panel-btn primary" disabled>
+                            Promote to {env.promoteTo} →
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="panel-section">
+                      <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+                        Environment data loading...
+                      </p>
+                    </div>
+                  )
+                })()}
+              </>
+            )}
+
+            {/* Staging/Prod Runtime - Fallback when no devops metrics */}
+            {(selectedStage === 'runtime-staging' || selectedStage === 'runtime-prod') && !devopsMetrics && (
               <div className="panel-section">
                 <h4>Environment: {selectedStage === 'runtime-staging' ? 'Staging' : 'Production'}</h4>
                 <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
-                  This environment will be available when you configure additional ArgoCD applications.
+                  Loading environment data...
                 </p>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* DORA Metrics Panel */}
+      {devopsMetrics && (
+        <div className="dora-metrics-bar">
+          <div className="dora-metric">
+            <span className="dora-label">Deploy Freq</span>
+            <span className={`dora-value ${devopsMetrics.dora.deploymentFrequency.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.deploymentFrequency.value}/{devopsMetrics.dora.deploymentFrequency.unit.split(' ')[1]}
+            </span>
+            <span className={`dora-rating ${devopsMetrics.dora.deploymentFrequency.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.deploymentFrequency.rating}
+            </span>
+          </div>
+          <div className="dora-metric">
+            <span className="dora-label">Lead Time</span>
+            <span className={`dora-value ${devopsMetrics.dora.leadTimeForChanges.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.leadTimeForChanges.value}{devopsMetrics.dora.leadTimeForChanges.unit.charAt(0)}
+            </span>
+            <span className={`dora-rating ${devopsMetrics.dora.leadTimeForChanges.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.leadTimeForChanges.rating}
+            </span>
+          </div>
+          <div className="dora-metric">
+            <span className="dora-label">Change Fail</span>
+            <span className={`dora-value ${devopsMetrics.dora.changeFailureRate.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.changeFailureRate.value}%
+            </span>
+            <span className={`dora-rating ${devopsMetrics.dora.changeFailureRate.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.changeFailureRate.rating}
+            </span>
+          </div>
+          <div className="dora-metric">
+            <span className="dora-label">MTTR</span>
+            <span className={`dora-value ${devopsMetrics.dora.meanTimeToRecovery.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.meanTimeToRecovery.value}{devopsMetrics.dora.meanTimeToRecovery.unit.charAt(0)}
+            </span>
+            <span className={`dora-rating ${devopsMetrics.dora.meanTimeToRecovery.rating.toLowerCase()}`}>
+              {devopsMetrics.dora.meanTimeToRecovery.rating}
+            </span>
+          </div>
+          {devopsMetrics.alerts.length > 0 && (
+            <div className="dora-alerts">
+              <span className="alert-badge">{devopsMetrics.alerts.length} Alert{devopsMetrics.alerts.length > 1 ? 's' : ''}</span>
+            </div>
+          )}
         </div>
       )}
 
