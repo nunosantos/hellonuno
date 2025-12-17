@@ -40,9 +40,37 @@ interface SystemInfo {
   timestamp: string
 }
 
+interface ClusterInfo {
+  cluster: {
+    name: string
+    namespace: string
+    environment: string
+  }
+  observability: {
+    grafana: string
+    prometheus: string
+    jaeger: string | null
+    kibana: string | null
+    argocd: string
+  }
+  services: {
+    backend: {
+      name: string
+      replicas: string
+      endpoint: string
+    }
+    frontend: {
+      name: string
+      replicas: string
+    }
+  }
+  timestamp: string
+}
+
 function App() {
   const [greeting, setGreeting] = useState<HelloResponse | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
+  const [clusterInfo, setClusterInfo] = useState<ClusterInfo | null>(null)
   const [customName, setCustomName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,9 +107,21 @@ function App() {
     }
   }
 
+  const fetchClusterInfo = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/cluster`)
+      if (!response.ok) throw new Error('Failed to fetch cluster info')
+      const data = await response.json()
+      setClusterInfo(data)
+    } catch (err) {
+      console.error('Could not fetch cluster info:', err)
+    }
+  }
+
   useEffect(() => {
     fetchGreeting()
     fetchSystemInfo()
+    fetchClusterInfo()
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -291,8 +331,150 @@ function App() {
       {/* System Info Section */}
       <section id="system" className="system-info">
         <div className="container">
-          <h2 className="section-title">Kubernetes System Information</h2>
-          <p className="section-subtitle">Live cluster and pod metrics</p>
+          <h2 className="section-title">DevOps Dashboard</h2>
+          <p className="section-subtitle">Cluster overview, metrics, and observability tools</p>
+
+          {clusterInfo && (
+            <>
+              <div className="info-section">
+                <h3 className="info-section-title">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  Cluster Overview
+                </h3>
+                <div className="info-cards">
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Cluster</span>
+                      <span className="info-value">{clusterInfo.cluster.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Namespace</span>
+                      <span className="info-value">{clusterInfo.cluster.namespace}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Backend Pods</span>
+                      <span className="info-value">{clusterInfo.services.backend.replicas}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Frontend Pods</span>
+                      <span className="info-value">{clusterInfo.services.frontend.replicas}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
+                <h3 className="info-section-title">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  Observability & Monitoring
+                </h3>
+                <div className="info-cards">
+                  <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="info-card clickable">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M7 16L12 11L16 15L21 10" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Grafana</span>
+                      <span className="info-value">Dashboards →</span>
+                    </div>
+                  </a>
+
+                  <a href={clusterInfo.observability.prometheus} target="_blank" rel="noopener noreferrer" className="info-card clickable">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Prometheus</span>
+                      <span className="info-value">Metrics →</span>
+                    </div>
+                  </a>
+
+                  <a href={clusterInfo.observability.argocd} target="_blank" rel="noopener noreferrer" className="info-card clickable">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">ArgoCD</span>
+                      <span className="info-value">GitOps →</span>
+                    </div>
+                  </a>
+
+                  {clusterInfo.observability.jaeger && (
+                    <a href={clusterInfo.observability.jaeger} target="_blank" rel="noopener noreferrer" className="info-card clickable">
+                      <div className="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
+                      </div>
+                      <div className="info-content">
+                        <span className="info-label">Jaeger</span>
+                        <span className="info-value">Tracing →</span>
+                      </div>
+                    </a>
+                  )}
+
+                  {clusterInfo.observability.kibana && (
+                    <a href={clusterInfo.observability.kibana} target="_blank" rel="noopener noreferrer" className="info-card clickable">
+                      <div className="info-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
+                      </div>
+                      <div className="info-content">
+                        <span className="info-label">Kibana</span>
+                        <span className="info-value">Logs →</span>
+                      </div>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           {systemInfo ? (
             <>
@@ -303,7 +485,7 @@ function App() {
                     <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
                     <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
                   </svg>
-                  Pod Information
+                  Backend Service ({systemInfo.service})
                 </h3>
                 <div className="info-cards">
                   <div className="info-card">
@@ -579,4 +761,4 @@ function App() {
 }
 
 export default App
-// Build timestamp: 1765973021
+// Build timestamp: 1765973201

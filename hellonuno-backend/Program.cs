@@ -63,6 +63,7 @@ app.MapGet("/api/system", () =>
     
     var systemInfo = new
     {
+        service = "backend",
         pod = new
         {
             name = Environment.GetEnvironmentVariable("HOSTNAME") ?? Environment.MachineName,
@@ -102,6 +103,47 @@ app.MapGet("/api/system", () =>
     return Results.Ok(systemInfo);
 })
 .WithName("GetSystemInfo")
+.WithOpenApi();
+
+// Get cluster overview with observability links
+app.MapGet("/api/cluster", () => 
+{
+    var clusterInfo = new
+    {
+        cluster = new
+        {
+            name = Environment.GetEnvironmentVariable("CLUSTER_NAME") ?? "minikube",
+            @namespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "hellonuno",
+            environment = app.Environment.EnvironmentName
+        },
+        observability = new
+        {
+            grafana = Environment.GetEnvironmentVariable("GRAFANA_URL") ?? "http://localhost:3000",
+            prometheus = Environment.GetEnvironmentVariable("PROMETHEUS_URL") ?? "http://localhost:9090",
+            jaeger = Environment.GetEnvironmentVariable("JAEGER_URL") ?? null as string,
+            kibana = Environment.GetEnvironmentVariable("KIBANA_URL") ?? null as string,
+            argocd = Environment.GetEnvironmentVariable("ARGOCD_URL") ?? "https://localhost:8443"
+        },
+        services = new
+        {
+            backend = new
+            {
+                name = "hellonuno-backend",
+                replicas = Environment.GetEnvironmentVariable("BACKEND_REPLICAS") ?? "2",
+                endpoint = "/api/system"
+            },
+            frontend = new
+            {
+                name = "hellonuno-frontend",
+                replicas = Environment.GetEnvironmentVariable("FRONTEND_REPLICAS") ?? "2"
+            }
+        },
+        timestamp = DateTime.UtcNow
+    };
+    
+    return Results.Ok(clusterInfo);
+})
+.WithName("GetClusterInfo")
 .WithOpenApi();
 
 app.Run();

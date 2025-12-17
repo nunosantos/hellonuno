@@ -812,3 +812,22 @@
     height: 24px;
   }
 }
+
+/* Clickable cards for observability links */
+.info-card.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.info-card.clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  border-color: var(--accent);
+}
+
+.info-card.clickable .info-value {
+  color: var(--accent);
+  font-weight: 600;
+}
