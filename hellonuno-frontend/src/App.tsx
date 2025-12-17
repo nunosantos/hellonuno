@@ -37,13 +37,14 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
 
-  const API_URL = import.meta.env.VITE_API_URL || ''
+  // Use relative URLs when VITE_API_URL is not set (for ingress routing)
+  const API_BASE = import.meta.env.VITE_API_URL || window.location.origin
 
   const fetchGreeting = async (name?: string) => {
     setLoading(true)
     setError(null)
     try {
-      const endpoint = name ? `${API_URL}/api/hello/${encodeURIComponent(name)}` : `${API_URL}/api/hello`
+      const endpoint = name ? `${API_BASE}/api/hello/${encodeURIComponent(name)}` : `${API_BASE}/api/hello`
       const response = await fetch(endpoint)
       if (!response.ok) throw new Error('Failed to fetch greeting')
       const data = await response.json()
@@ -57,7 +58,7 @@ function App() {
 
   const fetchSystemInfo = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/system`)
+      const response = await fetch(`${API_BASE}/api/system`)
       if (!response.ok) throw new Error('Failed to fetch system info')
       const data = await response.json()
       setSystemInfo(data)
