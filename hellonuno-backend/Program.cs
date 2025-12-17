@@ -55,6 +55,39 @@ app.MapGet("/api/info", () => new BackendInfo(
 .WithName("GetInfo")
 .WithOpenApi();
 
+// Get Kubernetes system info (safe, non-sensitive data only)
+app.MapGet("/api/system", () => 
+{
+    var systemInfo = new
+    {
+        pod = new
+        {
+            name = Environment.GetEnvironmentVariable("HOSTNAME") ?? Environment.MachineName,
+            @namespace = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "unknown",
+            serviceAccount = Environment.GetEnvironmentVariable("SERVICE_ACCOUNT") ?? "default",
+            nodeName = Environment.GetEnvironmentVariable("NODE_NAME") ?? "unknown"
+        },
+        platform = new
+        {
+            os = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+            architecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
+            runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+            processorCount = Environment.ProcessorCount
+        },
+        application = new
+        {
+            version = "1.0.0",
+            uptime = TimeSpan.FromMilliseconds(Environment.TickCount64).ToString(@"dd\.hh\:mm\:ss"),
+            environment = app.Environment.EnvironmentName
+        },
+        timestamp = DateTime.UtcNow
+    };
+    
+    return Results.Ok(systemInfo);
+})
+.WithName("GetSystemInfo")
+.WithOpenApi();
+
 app.Run();
 
 record HelloResponse(string Message, DateTime Timestamp, string ServerName);

@@ -15,9 +15,31 @@ interface BackendInfo {
   timestamp: string
 }
 
+interface SystemInfo {
+  pod: {
+    name: string
+    namespace: string
+    serviceAccount: string
+    nodeName: string
+  }
+  platform: {
+    os: string
+    architecture: string
+    runtime: string
+    processorCount: number
+  }
+  application: {
+    version: string
+    uptime: string
+    environment: string
+  }
+  timestamp: string
+}
+
 function App() {
   const [greeting, setGreeting] = useState<HelloResponse | null>(null)
   const [backendInfo, setBackendInfo] = useState<BackendInfo | null>(null)
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [customName, setCustomName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,9 +75,21 @@ function App() {
     }
   }
 
+  const fetchSystemInfo = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/system`)
+      if (!response.ok) throw new Error('Failed to fetch system info')
+      const data = await response.json()
+      setSystemInfo(data)
+    } catch (err) {
+      console.error('Could not fetch system info:', err)
+    }
+  }
+
   useEffect(() => {
     fetchGreeting()
     fetchBackendInfo()
+    fetchSystemInfo()
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -263,68 +297,209 @@ function App() {
       </section>
 
       {/* System Info Section */}
-      {backendInfo && (
-        <section id="system" className="system-info">
-          <div className="container">
-            <h2 className="section-title">System Information</h2>
-            <p className="section-subtitle">Real-time metrics from the backend service</p>
+      <section id="system" className="system-info">
+        <div className="container">
+          <h2 className="section-title">Kubernetes System Information</h2>
+          <p className="section-subtitle">Live cluster and pod metrics</p>
 
-            <div className="info-cards">
-              <div className="info-card">
-                <div className="info-icon">
+          {systemInfo ? (
+            <>
+              <div className="info-section">
+                <h3 className="info-section-title">
                   <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12H19M12 5V19" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
                   </svg>
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Service Name</span>
-                  <span className="info-value">{backendInfo.name}</span>
+                  Pod Information
+                </h3>
+                <div className="info-cards">
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M9 3V21M15 3V21M3 9H21M3 15H21" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Pod Name</span>
+                      <span className="info-value">{systemInfo.pod.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Namespace</span>
+                      <span className="info-value">{systemInfo.pod.namespace}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Node</span>
+                      <span className="info-value">{systemInfo.pod.nodeName}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Service Account</span>
+                      <span className="info-value">{systemInfo.pod.serviceAccount}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="info-card">
-                <div className="info-icon">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M7 7H17V17H7V7Z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M3 3H21V21H3V3Z" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Version</span>
-                  <span className="info-value">{backendInfo.version}</span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <div className="info-icon">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Runtime</span>
-                  <span className="info-value">{backendInfo.runtime}</span>
-                </div>
-              </div>
-
-              <div className="info-card">
-                <div className="info-icon">
+              <div className="info-section">
+                <h3 className="info-section-title">
                   <svg viewBox="0 0 24 24" fill="none">
                     <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M8 21H16" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M12 17V21" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M8 21H16M12 17V21" stroke="currentColor" strokeWidth="2"/>
                   </svg>
-                </div>
-                <div className="info-content">
-                  <span className="info-label">Host</span>
-                  <span className="info-value">{backendInfo.host}</span>
+                  Platform Details
+                </h3>
+                <div className="info-cards">
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M9 9H15V15H9V9Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Operating System</span>
+                      <span className="info-value">{systemInfo.platform.os}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="8" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M7 8V5C7 4.46957 7.21071 3.96086 7.58579 3.58579C7.96086 3.21071 8.46957 3 9 3H15C15.5304 3 16.0391 3.21071 16.4142 3.58579C16.7893 3.96086 17 4.46957 17 5V8" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Architecture</span>
+                      <span className="info-value">{systemInfo.platform.architecture}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Runtime</span>
+                      <span className="info-value">{systemInfo.platform.runtime}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="2" y="7" width="20" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M6 11H6.01M10 11H10.01M14 11H14.01M18 11H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">CPU Cores</span>
+                      <span className="info-value">{systemInfo.platform.processorCount}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              <div className="info-section">
+                <h3 className="info-section-title">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  Application Status
+                </h3>
+                <div className="info-cards">
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M7 7H17V17H7V7Z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M3 3H21V21H3V3Z" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Version</span>
+                      <span className="info-value">{systemInfo.application.version}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Uptime</span>
+                      <span className="info-value">{systemInfo.application.uptime}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 8V12L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Environment</span>
+                      <span className="info-value">{systemInfo.application.environment}</span>
+                    </div>
+                  </div>
+
+                  <div className="info-card">
+                    <div className="info-icon">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                    </div>
+                    <div className="info-content">
+                      <span className="info-label">Last Updated</span>
+                      <span className="info-value">{new Date(systemInfo.timestamp).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Loading system information...</p>
             </div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="footer">
