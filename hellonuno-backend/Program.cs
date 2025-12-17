@@ -617,7 +617,7 @@ app.MapGet("/api/pipeline", async () =>
         // Get deployed info from environment
         var deployedCommit = Environment.GetEnvironmentVariable("GIT_COMMIT") ?? "unknown";
         var deployedBranch = Environment.GetEnvironmentVariable("GIT_BRANCH") ?? "main";
-        var imageTag = Environment.GetEnvironmentVariable("IMAGE_TAG") ?? deployedCommit.Length > 7 ? deployedCommit.Substring(0, 7) : deployedCommit;
+        var imageTag = Environment.GetEnvironmentVariable("IMAGE_TAG") ?? (deployedCommit.Length > 7 ? deployedCommit.Substring(0, 7) : deployedCommit);
         
         // Calculate total pipeline duration
         string? totalDuration = null;
