@@ -92,8 +92,7 @@ ingress:
   enabled: true
   className: nginx
   host: hellonuno.local
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+  annotations: {}
 
 # Autoscaling configuration
 autoscaling:
