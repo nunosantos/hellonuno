@@ -41,60 +41,6 @@ interface SystemInfo {
   timestamp: string
 }
 
-interface ServiceOverview {
-  namespace: string
-  environment: string
-  totalServices: number
-  services: Service[]
-  timestamp: string
-}
-
-interface Service {
-  name: string
-  github: {
-    commit: string
-    commitShort: string
-    branch: string
-    repository: string
-    commitUrl: string
-  }
-  deployment: {
-    status: string
-    deployedAt: string
-    deployedBy: string
-    version: string
-  }
-  kubernetes: {
-    podsReady: string
-    totalPods: number
-    healthyPods: number
-    pods: PodInfo[]
-  }
-  observability: {
-    metrics: string
-    logs: string
-    traces: string
-    apm: string
-  }
-  documentation: {
-    api: string
-    readme: string
-    runbook: string
-    swagger: string | null
-  }
-}
-
-interface PodInfo {
-  name: string
-  nodeName: string
-  podIP: string
-  phase: string
-  ready: boolean
-  restartCount: number
-  startTime: string
-  image: string
-}
-
 interface ClusterInfo {
   cluster: {
     name: string
@@ -816,4 +762,4 @@ function App() {
 }
 
 export default App
-// Build timestamp: 1765974651
+// Build timestamp: 1765975253
