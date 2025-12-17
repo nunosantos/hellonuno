@@ -7,14 +7,6 @@ interface HelloResponse {
   serverName: string
 }
 
-interface BackendInfo {
-  name: string
-  version: string
-  runtime: string
-  host: string
-  timestamp: string
-}
-
 interface SystemInfo {
   pod: {
     name: string
@@ -38,7 +30,6 @@ interface SystemInfo {
 
 function App() {
   const [greeting, setGreeting] = useState<HelloResponse | null>(null)
-  const [backendInfo, setBackendInfo] = useState<BackendInfo | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [customName, setCustomName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -64,17 +55,6 @@ function App() {
     }
   }
 
-  const fetchBackendInfo = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/info`)
-      if (!response.ok) throw new Error('Failed to fetch backend info')
-      const data = await response.json()
-      setBackendInfo(data)
-    } catch (err) {
-      console.error('Could not fetch backend info:', err)
-    }
-  }
-
   const fetchSystemInfo = async () => {
     try {
       const response = await fetch(`${API_URL}/api/system`)
@@ -88,7 +68,6 @@ function App() {
 
   useEffect(() => {
     fetchGreeting()
-    fetchBackendInfo()
     fetchSystemInfo()
   }, [])
 
