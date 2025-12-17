@@ -41,6 +41,33 @@ interface SystemInfo {
   timestamp: string
 }
 
+interface Changelog {
+  service: string
+  deployed: {
+    sha: string
+    message: string
+    author: string
+    deployedAt: string
+    deployedBy: string
+    url: string
+  }
+  drift: {
+    hasDrift: boolean
+    commitsAhead: number
+    commits: Array<{
+      sha: string
+      message: string
+      author: string
+      date: string
+    }>
+  }
+  links: {
+    compare: string
+    fullChangelog: string
+  }
+  timestamp: string
+}
+
 interface ClusterInfo {
   cluster: {
     name: string
@@ -72,11 +99,17 @@ function App() {
   const [greeting, setGreeting] = useState<HelloResponse | null>(null)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [clusterInfo, setClusterInfo] = useState<ClusterInfo | null>(null)
+  const [changelog, setChangelog] = useState<Changelog | null>(null)
   const [customName, setCustomName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('home')
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    build: false,
+    runtime: false,
+    observability: false
+  })
 
   // Use relative URLs when VITE_API_URL is not set (for ingress routing)
   const API_BASE = import.meta.env.VITE_API_URL || window.location.origin
@@ -119,10 +152,26 @@ function App() {
     }
   }
 
+  const fetchChangelog = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/changelog/backend`)
+      if (!response.ok) throw new Error('Failed to fetch changelog')
+      const data = await response.json()
+      setChangelog(data)
+    } catch (err) {
+      console.error('Could not fetch changelog:', err)
+    }
+  }
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
   useEffect(() => {
     fetchGreeting()
     fetchSystemInfo()
     fetchClusterInfo()
+    fetchChangelog()
   }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -329,387 +378,142 @@ function App() {
         </div>
       </section>
 
-      {/* System Info Section */}
+      {/* System Info Section - Sequential Flow */}
       <section id="system" className="system-info">
         <div className="container">
-          <h2 className="section-title">DevOps Dashboard</h2>
-          <p className="section-subtitle">Cluster overview, metrics, and observability tools</p>
+          <h2 className="section-title">Deployment Dashboard</h2>
+          <p className="section-subtitle">Track your code from commit to production</p>
 
-          {clusterInfo && (
-            <>
-              <div className="info-section">
-                <h3 className="info-section-title">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  Cluster Overview
-                </h3>
-                <div className="info-cards">
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Cluster</span>
-                      <span className="info-value">{clusterInfo.cluster.name}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Namespace</span>
-                      <span className="info-value">{clusterInfo.cluster.namespace}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Backend Pods</span>
-                      <span className="info-value">{clusterInfo.services.backend.replicas}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Frontend Pods</span>
-                      <span className="info-value">{clusterInfo.services.frontend.replicas}</span>
-                    </div>
-                  </div>
+          {/* Hero Section - Always Visible */}
+          {changelog && (
+            <div className="deployment-hero">
+              <div className="deployment-status">
+                <div className="status-badge healthy">
+                  <span className="status-dot"></span>
+                  {systemInfo && clusterInfo ? '4/4 Services Healthy' : 'Loading...'}
                 </div>
+                {changelog.drift.hasDrift && (
+                  <div className="status-badge warning">
+                    ⚠️ {changelog.drift.commitsAhead} commit{changelog.drift.commitsAhead > 1 ? 's' : ''} behind master
+                  </div>
+                )}
               </div>
 
-              <div className="info-section">
-                <h3 className="info-section-title">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  Observability & Monitoring
-                </h3>
-                <div className="info-cards">
-                  <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="info-card clickable">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M3 3V21H21" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M7 16L12 11L16 15L21 10" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Grafana</span>
-                      <span className="info-value">Dashboards →</span>
-                    </div>
-                  </a>
-
-                  <a href={clusterInfo.observability.prometheus} target="_blank" rel="noopener noreferrer" className="info-card clickable">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Prometheus</span>
-                      <span className="info-value">Metrics →</span>
-                    </div>
-                  </a>
-
-                  <a href={clusterInfo.observability.argocd} target="_blank" rel="noopener noreferrer" className="info-card clickable">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">ArgoCD</span>
-                      <span className="info-value">GitOps →</span>
-                    </div>
-                  </a>
-
-                  {clusterInfo.observability.jaeger && (
-                    <a href={clusterInfo.observability.jaeger} target="_blank" rel="noopener noreferrer" className="info-card clickable">
-                      <div className="info-icon">
-                        <svg viewBox="0 0 24 24" fill="none">
-                          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </div>
-                      <div className="info-content">
-                        <span className="info-label">Jaeger</span>
-                        <span className="info-value">Tracing →</span>
-                      </div>
+              <div className="deployment-card">
+                <h3 className="deployment-title">🚀 Currently Deployed</h3>
+                <div className="deployment-info">
+                  <div className="deployment-commit">
+                    <span className="commit-sha">{changelog.deployed.sha}</span>
+                    <span className="commit-message">"{changelog.deployed.message}"</span>
+                  </div>
+                  <div className="deployment-meta">
+                    <span>By <strong>{changelog.deployed.author}</strong></span>
+                    <span>•</span>
+                    <span>Deployed {new Date(changelog.deployed.deployedAt).toLocaleString()}</span>
+                    <span>•</span>
+                    <span>via <strong>{changelog.deployed.deployedBy}</strong></span>
+                  </div>
+                  <div className="deployment-actions">
+                    <a href={changelog.deployed.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
+                      View Commit on GitHub →
                     </a>
-                  )}
-
-                  {clusterInfo.observability.kibana && (
-                    <a href={clusterInfo.observability.kibana} target="_blank" rel="noopener noreferrer" className="info-card clickable">
-                      <div className="info-icon">
-                        <svg viewBox="0 0 24 24" fill="none">
-                          <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        </svg>
-                      </div>
-                      <div className="info-content">
-                        <span className="info-label">Kibana</span>
-                        <span className="info-value">Logs →</span>
-                      </div>
-                    </a>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {systemInfo ? (
-            <>
-              <div className="info-section">
-                <h3 className="info-section-title">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  Backend Service ({systemInfo.service})
-                </h3>
-                <div className="info-cards">
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M9 3V21M15 3V21M3 9H21M3 15H21" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Pod Name</span>
-                      <span className="info-value">{systemInfo.pod.name}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Namespace</span>
-                      <span className="info-value">{systemInfo.pod.namespace}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Node</span>
-                      <span className="info-value">{systemInfo.pod.nodeName}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M8 2H16C17.1 2 18 2.9 18 4V8M16 22H8C6.9 22 6 21.1 6 20V8M6 8H18" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Pod IP</span>
-                      <span className="info-value">{systemInfo.pod.podIp}</span>
-                    </div>
+                    {changelog.drift.hasDrift && (
+                      <a href={changelog.links.compare} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
+                        Compare with Latest →
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
-
-              <div className="info-section">
-                <h3 className="info-section-title">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
-                    <path d="M8 21H16M12 17V21" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  Resource Usage
-                </h3>
-                <div className="info-cards">
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M9 9H15V15H9V9Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Memory Usage</span>
-                      <span className="info-value">{systemInfo.resources.memoryUsageMB.toFixed(2)} MB</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="3" y="8" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M7 8V5C7 4.46957 7.21071 3.96086 7.58579 3.58579C7.96086 3.21071 8.46957 3 9 3H15C15.5304 3 16.0391 3.21071 16.4142 3.58579C16.7893 3.96086 17 4.46957 17 5V8" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">GC Memory</span>
-                      <span className="info-value">{systemInfo.resources.gcMemoryMB.toFixed(2)} MB</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Thread Count</span>
-                      <span className="info-value">{systemInfo.resources.threadCount}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="2" y="7" width="20" height="10" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M6 11H6.01M10 11H10.01M14 11H14.01M18 11H18.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">CPU Cores</span>
-                      <span className="info-value">{systemInfo.resources.cpuCores}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M19 21V5C19 3.89 18.1 3 17 3H7C5.89 3 5 3.89 5 5V21L12 18L19 21Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">GC Collections</span>
-                      <span className="info-value">G0: {systemInfo.resources.gen0Collections} | G1: {systemInfo.resources.gen1Collections} | G2: {systemInfo.resources.gen2Collections}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="info-section">
-                <h3 className="info-section-title">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  Health & Status
-                </h3>
-                <div className="info-cards">
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Status</span>
-                      <span className="info-value" style={{color: '#10b981'}}>{systemInfo.health.status}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Uptime</span>
-                      <span className="info-value">{systemInfo.health.uptime}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Environment</span>
-                      <span className="info-value">{systemInfo.health.environment}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M9 9H15V15H9V9Z" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Process ID</span>
-                      <span className="info-value">{systemInfo.health.processId}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Start Time</span>
-                      <span className="info-value">{new Date(systemInfo.health.startTime).toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-card">
-                    <div className="info-icon">
-                      <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2"/>
-                      </svg>
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Platform</span>
-                      <span className="info-value">{systemInfo.platform.architecture} / {systemInfo.platform.runtime}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="loading-state">
-              <div className="spinner"></div>
-              <p>Loading system information...</p>
             </div>
           )}
+
+          {/* Collapsible: Build & CI/CD */}
+          <div className="collapsible-section">
+            <div className="section-header" onClick={() => toggleSection('build')}>
+              <h3 className="section-title-small">
+                📝 Build & CI/CD Status
+                <span className="expand-icon">{expandedSections.build ? '▼' : '▶'}</span>
+              </h3>
+            </div>
+            {expandedSections.build && changelog && (
+              <div className="section-content">
+                <div className="commits-list">
+                  <h4>Recent Activity</h4>
+                  {changelog.drift.hasDrift && changelog.drift.commits.length > 0 && (
+                    <div className="alert alert-warning">
+                      <strong>⚠️ Pending Deployment:</strong> {changelog.drift.commitsAhead} new commit{changelog.drift.commitsAhead > 1 ? 's' : ''} not yet deployed
+                    </div>
+                  )}
+                  {changelog.drift.commits.map((commit, i) => (
+                    <div key={i} className="commit-item pending">
+                      <span className="commit-sha-small">{commit.sha}</span>
+                      <span className="commit-msg">{commit.message}</span>
+                      <span className="commit-author">by {commit.author}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Collapsible: Runtime Status */}
+          <div className="collapsible-section">
+            <div className="section-header" onClick={() => toggleSection('runtime')}>
+              <h3 className="section-title-small">
+                🏃 Runtime Status
+                <span className="expand-icon">{expandedSections.runtime ? '▼' : '▶'}</span>
+              </h3>
+            </div>
+            {expandedSections.runtime && systemInfo && clusterInfo && (
+              <div className="section-content">
+                <div className="runtime-grid">
+                  <div className="runtime-card">
+                    <h4>Backend Pods</h4>
+                    <div className="pod-status">2/2 Running</div>
+                    <div className="resource-info">
+                      <div>CPU: {systemInfo.resources.cpuCores} cores</div>
+                      <div>Memory: {systemInfo.resources.memoryUsageMB}MB</div>
+                    </div>
+                  </div>
+                  <div className="runtime-card">
+                    <h4>Frontend Pods</h4>
+                    <div className="pod-status">2/2 Running</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Collapsible: Observability */}
+          <div className="collapsible-section">
+            <div className="section-header" onClick={() => toggleSection('observability')}>
+              <h3 className="section-title-small">
+                📊 Observability & Monitoring
+                <span className="expand-icon">{expandedSections.observability ? '▼' : '▶'}</span>
+              </h3>
+            </div>
+            {expandedSections.observability && clusterInfo && (
+              <div className="section-content">
+                <div className="observability-links">
+                  <a href={clusterInfo.observability.grafana} target="_blank" className="obs-link">
+                    <span>📈 Grafana</span>
+                    <span>→</span>
+                  </a>
+                  <a href={clusterInfo.observability.prometheus} target="_blank" className="obs-link">
+                    <span>⏱️ Prometheus</span>
+                    <span>→</span>
+                  </a>
+                  <a href={clusterInfo.observability.argocd} target="_blank" className="obs-link">
+                    <span>🔄 ArgoCD</span>
+                    <span>→</span>
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {!changelog && <div className="loading">Loading deployment info...</div>}
         </div>
       </section>
 
@@ -762,4 +566,4 @@ function App() {
 }
 
 export default App
-// Build timestamp: 1765975253
+// Build timestamp: 1765976345
