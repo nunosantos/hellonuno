@@ -386,6 +386,136 @@ app.MapGet("/api/services", async (IKubernetes k8s) =>
 .WithName("GetServicesOverview")
 .WithOpenApi();
 
+// Get deployment changelog with drift detection
+app.MapGet("/api/changelog/{service}", async (string service, IKubernetes k8s) => 
+{
+    try
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "HelloNuno-DevOps-Dashboard");
+        
+        var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+        if (!string.IsNullOrEmpty(githubToken))
+        {
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {githubToken}");
+        }
+
+        var owner = Environment.GetEnvironmentVariable("GITHUB_OWNER") ?? "nunosantos";
+        var repo = Environment.GetEnvironmentVariable("GITHUB_REPO") ?? "hellonuno";
+        var namespaceName = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "hellonuno";
+        
+        // Get deployed commit SHA from pod annotations
+        var pods = await k8s.CoreV1.ListNamespacedPodAsync(namespaceName);
+        var servicePod = pods.Items.FirstOrDefault(p => 
+            p.Metadata.Labels?.ContainsKey("app") == true && 
+            p.Metadata.Labels["app"].Contains(service));
+        
+        var deployedCommit = servicePod?.Metadata?.Annotations?.ContainsKey("git.commit.sha") == true 
+            ? servicePod.Metadata.Annotations["git.commit.sha"] 
+            : null;
+        var deployedAt = servicePod?.Metadata?.Annotations?.ContainsKey("deployed.at") == true 
+            ? servicePod.Metadata.Annotations["deployed.at"] 
+            : null;
+        var deployedBy = servicePod?.Metadata?.Annotations?.ContainsKey("deployed.by") == true 
+            ? servicePod.Metadata.Annotations["deployed.by"] 
+            : null;
+
+        if (string.IsNullOrEmpty(deployedCommit))
+        {
+            return Results.Json(new { error = "No deployment information found" }, statusCode: 404);
+        }
+
+        // Get commit details for deployed version
+        var deployedCommitUrl = $"https://api.github.com/repos/{owner}/{repo}/commits/{deployedCommit}";
+        var deployedCommitResponse = await httpClient.GetStringAsync(deployedCommitUrl);
+        var deployedCommitData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(deployedCommitResponse);
+
+        // Get commits in deployed version
+        var changelogUrl = $"https://api.github.com/repos/{owner}/{repo}/commits?sha={deployedCommit}&per_page=10";
+        var changelogResponse = await httpClient.GetStringAsync(changelogUrl);
+        var changelog = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(changelogResponse);
+
+        // Calculate drift
+        var latestCommitsUrl = $"https://api.github.com/repos/{owner}/{repo}/commits?sha=master&per_page=1";
+        var latestResponse = await httpClient.GetStringAsync(latestCommitsUrl);
+        var latestCommits = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(latestResponse);
+        var latestCommitSha = latestCommits[0].GetProperty("sha").GetString();
+        
+        var drift = new List<object>();
+        var driftCount = 0;
+
+        if (latestCommitSha != deployedCommit)
+        {
+            var compareUrl = $"https://api.github.com/repos/{owner}/{repo}/compare/{deployedCommit}...master";
+            var compareResponse = await httpClient.GetStringAsync(compareUrl);
+            var compareData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(compareResponse);
+            
+            driftCount = compareData.GetProperty("ahead_by").GetInt32();
+            
+            if (compareData.TryGetProperty("commits", out var driftCommits))
+            {
+                foreach (var commit in driftCommits.EnumerateArray().Take(5))
+                {
+                    drift.Add(new
+                    {
+                        sha = commit.GetProperty("sha").GetString()?.Substring(0, 7),
+                        message = commit.GetProperty("commit").GetProperty("message").GetString()?.Split('\n')[0],
+                        author = commit.GetProperty("commit").GetProperty("author").GetProperty("name").GetString(),
+                        date = commit.GetProperty("commit").GetProperty("author").GetProperty("date").GetString()
+                    });
+                }
+            }
+        }
+
+        // Build changelog
+        var changelogEntries = new List<object>();
+        foreach (var commit in changelog.EnumerateArray().Take(10))
+        {
+            changelogEntries.Add(new
+            {
+                sha = commit.GetProperty("sha").GetString()?.Substring(0, 7),
+                message = commit.GetProperty("commit").GetProperty("message").GetString()?.Split('\n')[0],
+                author = commit.GetProperty("commit").GetProperty("author").GetProperty("name").GetString(),
+                date = commit.GetProperty("commit").GetProperty("author").GetProperty("date").GetString(),
+                url = commit.GetProperty("html_url").GetString()
+            });
+        }
+
+        return Results.Ok(new
+        {
+            service = service,
+            deployed = new
+            {
+                sha = deployedCommit.Substring(0, 7),
+                message = deployedCommitData.GetProperty("commit").GetProperty("message").GetString()?.Split('\n')[0],
+                author = deployedCommitData.GetProperty("commit").GetProperty("author").GetProperty("name").GetString(),
+                deployedAt = deployedAt,
+                deployedBy = deployedBy,
+                url = $"https://github.com/{owner}/{repo}/commit/{deployedCommit}"
+            },
+            changelog = changelogEntries,
+            drift = new
+            {
+                hasDrift = driftCount > 0,
+                commitsAhead = driftCount,
+                commits = drift
+            },
+            links = new
+            {
+                compare = $"https://github.com/{owner}/{repo}/compare/{deployedCommit}...master",
+                fullChangelog = $"https://github.com/{owner}/{repo}/commits/master"
+            },
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { error = "Failed to fetch changelog", message = ex.Message }, statusCode: 500);
+    }
+})
+.WithName("GetDeploymentChangelog")
+.WithOpenApi();
+
 app.Run();
 
 record HelloResponse(string Message, DateTime Timestamp, string ServerName);
