@@ -55,8 +55,8 @@ frontend:
 
   image:
     repository: localhost/hellonuno-frontend
-    tag: latest
-    pullPolicy: IfNotPresent
+    tag: v2.0.0
+    pullPolicy: Always
 
   service:
     type: ClusterIP

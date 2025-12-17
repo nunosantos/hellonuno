@@ -19,7 +19,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage with nginx-unprivileged (designed for non-root)
-FROM nginxinc/nginx-unprivileged:alpine AS runtime
+FROM docker.io/nginxinc/nginx-unprivileged:alpine AS runtime
 
 # Copy custom nginx config (nginx-unprivileged uses /etc/nginx/conf.d/)
 COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
