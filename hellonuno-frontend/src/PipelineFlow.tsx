@@ -152,7 +152,7 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
       data: {
         label: 'RUNTIME',
         icon: '<svg viewBox="0 0 24 24" fill="none" width="28" height="28"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="2"/></svg>',
-        status: systemInfo ? 'success' : 'idle',
+        status: systemInfo ? 'success' : 'failed',
         envBadge: 'DEV',
       },
     },
