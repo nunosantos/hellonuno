@@ -118,3 +118,11 @@ imagePullSecrets: []
 # To use private images, create a secret and uncomment:
 # imagePullSecrets:
 #   - name: ghcr-secret
+
+# Deployment metadata (populated by CI/CD)
+deployment:
+  git:
+    commitSha: "unknown"
+    branch: "unknown"
+  timestamp: "unknown"
+  actor: "manual"

@@ -178,6 +178,7 @@ app.MapGet("/api/pods", async (IKubernetes k8s) =>
             {
                 name = cs.Name,
                 image = cs.Image,
+                imageID = cs.ImageID,
                 ready = cs.Ready,
                 restartCount = cs.RestartCount,
                 state = cs.State.Running != null ? "Running" : 
@@ -185,6 +186,7 @@ app.MapGet("/api/pods", async (IKubernetes k8s) =>
                         cs.State.Terminated != null ? "Terminated" : "Unknown"
             }).ToList(),
             labels = pod.Metadata.Labels,
+            annotations = pod.Metadata.Annotations,
             conditions = pod.Status.Conditions?.Select(c => new
             {
                 type = c.Type,
@@ -213,6 +215,71 @@ app.MapGet("/api/pods", async (IKubernetes k8s) =>
     }
 })
 .WithName("GetAllPods")
+.WithOpenApi();
+
+// Get GitHub deployment information
+app.MapGet("/api/github/deployment", async () => 
+{
+    try
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "HelloNuno-DevOps-Dashboard");
+        
+        var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+        if (!string.IsNullOrEmpty(githubToken))
+        {
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {githubToken}");
+        }
+
+        var owner = Environment.GetEnvironmentVariable("GITHUB_OWNER") ?? "nunosantos";
+        var repo = Environment.GetEnvironmentVariable("GITHUB_REPO") ?? "hellonuno";
+        
+        // Get latest commits
+        var commitsUrl = $"https://api.github.com/repos/{owner}/{repo}/commits?per_page=5";
+        var commitsResponse = await httpClient.GetStringAsync(commitsUrl);
+        var commits = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(commitsResponse);
+        
+        // Get latest workflow runs
+        var workflowsUrl = $"https://api.github.com/repos/{owner}/{repo}/actions/runs?per_page=5";
+        var workflowsResponse = await httpClient.GetStringAsync(workflowsUrl);
+        var workflows = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(workflowsResponse);
+
+        // Get current deployment info from environment
+        var deploymentInfo = new
+        {
+            repository = new
+            {
+                owner = owner,
+                name = repo,
+                url = $"https://github.com/{owner}/{repo}"
+            },
+            deployed = new
+            {
+                commitSha = Environment.GetEnvironmentVariable("GIT_COMMIT") ?? "unknown",
+                commitShort = (Environment.GetEnvironmentVariable("GIT_COMMIT") ?? "unknown").Substring(0, Math.Min(7, (Environment.GetEnvironmentVariable("GIT_COMMIT") ?? "unknown").Length)),
+                branch = Environment.GetEnvironmentVariable("GIT_BRANCH") ?? "unknown",
+                buildNumber = Environment.GetEnvironmentVariable("BUILD_NUMBER") ?? "unknown",
+                deployedAt = Environment.GetEnvironmentVariable("DEPLOYED_AT") ?? "unknown",
+                deployedBy = Environment.GetEnvironmentVariable("DEPLOYED_BY") ?? "ArgoCD"
+            },
+            latestCommits = commits,
+            latestWorkflows = workflows,
+            timestamp = DateTime.UtcNow
+        };
+
+        return Results.Ok(deploymentInfo);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            error = "Failed to fetch GitHub information",
+            message = ex.Message,
+            hint = "Ensure GITHUB_TOKEN is set if repository is private"
+        }, statusCode: 500);
+    }
+})
+.WithName("GetGitHubDeploymentInfo")
 .WithOpenApi();
 
 app.Run();

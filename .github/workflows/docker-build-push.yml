@@ -271,12 +271,19 @@ jobs:
       - name: Update image tags in Helm values
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
           # Update backend image tag
           sed -i "s|tag: .*|tag: latest|g" helm/hellonuno/values.yaml
           
+          # Update deployment metadata
+          sed -i "s|commitSha: .*|commitSha: \"${{ github.sha }}\"|g" helm/hellonuno/values.yaml
+          sed -i "s|branch: .*|branch: \"${{ github.ref_name }}\"|g" helm/hellonuno/values.yaml
+          sed -i "s|timestamp: .*|timestamp: \"${TIMESTAMP}\"|g" helm/hellonuno/values.yaml
+          sed -i "s|actor: .*|actor: \"${{ github.actor }}\"|g" helm/hellonuno/values.yaml
+          
           # Verify changes
-          grep "tag:" helm/hellonuno/values.yaml
+          grep -A10 "deployment:" helm/hellonuno/values.yaml
 
       - name: Commit and push if changed
         run: |
