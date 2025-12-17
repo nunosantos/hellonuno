@@ -167,8 +167,6 @@ jobs:
             type=gha
             type=registry,ref=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:buildcache
           cache-to: type=gha,mode=max
-          build-args: |
-            VITE_API_URL=/api
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -218,8 +216,6 @@ jobs:
           cache-to: |
             type=gha,mode=max
             type=registry,ref=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:buildcache,mode=max
-          build-args: |
-            VITE_API_URL=/api
           provenance: true
           sbom: true
 
