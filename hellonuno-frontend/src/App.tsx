@@ -378,19 +378,19 @@ function App() {
         </div>
       </section>
 
-      {/* System Info Section - Sequential Flow */}
+      {/* System Info Section - Sequential Flow with REAL Data */}
       <section id="system" className="system-info">
         <div className="container">
           <h2 className="section-title">Deployment Dashboard</h2>
-          <p className="section-subtitle">Track your code from commit to production</p>
+          <p className="section-subtitle">Code → Build → Deploy → Runtime → Observe</p>
 
-          {/* Hero Section - Always Visible */}
-          {changelog && (
+          {/* 1. DEPLOYMENT STATUS - Always Visible */}
+          {changelog && clusterInfo && (
             <div className="deployment-hero">
               <div className="deployment-status">
                 <div className="status-badge healthy">
                   <span className="status-dot"></span>
-                  {systemInfo && clusterInfo ? '4/4 Services Healthy' : 'Loading...'}
+                  {clusterInfo.services.backend.replicas} Backend + {clusterInfo.services.frontend.replicas} Frontend Healthy
                 </div>
                 {changelog.drift.hasDrift && (
                   <div className="status-badge warning">
@@ -407,19 +407,19 @@ function App() {
                     <span className="commit-message">"{changelog.deployed.message}"</span>
                   </div>
                   <div className="deployment-meta">
-                    <span>By <strong>{changelog.deployed.author}</strong></span>
+                    <span>👤 <strong>{changelog.deployed.author}</strong></span>
                     <span>•</span>
-                    <span>Deployed {new Date(changelog.deployed.deployedAt).toLocaleString()}</span>
+                    <span>🕐 {new Date(changelog.deployed.deployedAt).toLocaleString()}</span>
                     <span>•</span>
                     <span>via <strong>{changelog.deployed.deployedBy}</strong></span>
                   </div>
                   <div className="deployment-actions">
                     <a href={changelog.deployed.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary">
-                      View Commit on GitHub →
+                      📝 View Commit on GitHub →
                     </a>
                     {changelog.drift.hasDrift && (
                       <a href={changelog.links.compare} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
-                        Compare with Latest →
+                        🔍 Compare with Latest →
                       </a>
                     )}
                   </div>
@@ -428,64 +428,177 @@ function App() {
             </div>
           )}
 
-          {/* Collapsible: Build & CI/CD */}
+          {/* 2. BUILD & CI/CD - Collapsible */}
           <div className="collapsible-section">
             <div className="section-header" onClick={() => toggleSection('build')}>
               <h3 className="section-title-small">
-                📝 Build & CI/CD Status
+                📝 Build & CI/CD Pipeline
                 <span className="expand-icon">{expandedSections.build ? '▼' : '▶'}</span>
               </h3>
             </div>
             {expandedSections.build && changelog && (
               <div className="section-content">
-                <div className="commits-list">
-                  <h4>Recent Activity</h4>
-                  {changelog.drift.hasDrift && changelog.drift.commits.length > 0 && (
+                {changelog.drift.hasDrift && changelog.drift.commits.length > 0 ? (
+                  <>
                     <div className="alert alert-warning">
                       <strong>⚠️ Pending Deployment:</strong> {changelog.drift.commitsAhead} new commit{changelog.drift.commitsAhead > 1 ? 's' : ''} not yet deployed
                     </div>
-                  )}
-                  {changelog.drift.commits.map((commit, i) => (
-                    <div key={i} className="commit-item pending">
-                      <span className="commit-sha-small">{commit.sha}</span>
-                      <span className="commit-msg">{commit.message}</span>
-                      <span className="commit-author">by {commit.author}</span>
+                    <div className="commits-list">
+                      <h4>Commits Waiting to Deploy:</h4>
+                      {changelog.drift.commits.map((commit, i) => (
+                        <div key={i} className="commit-item pending">
+                          <span className="commit-sha-small">{commit.sha}</span>
+                          <span className="commit-msg">{commit.message}</span>
+                          <span className="commit-author">by {commit.author}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <div className="info-message">
+                    ✅ You're running the latest code from master branch!
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Collapsible: Runtime Status */}
+          {/* 3. KUBERNETES RUNTIME - Collapsible */}
           <div className="collapsible-section">
             <div className="section-header" onClick={() => toggleSection('runtime')}>
               <h3 className="section-title-small">
-                🏃 Runtime Status
+                ☸️ Kubernetes Runtime Status
                 <span className="expand-icon">{expandedSections.runtime ? '▼' : '▶'}</span>
               </h3>
             </div>
             {expandedSections.runtime && systemInfo && clusterInfo && (
               <div className="section-content">
-                <div className="runtime-grid">
-                  <div className="runtime-card">
-                    <h4>Backend Pods</h4>
-                    <div className="pod-status">2/2 Running</div>
-                    <div className="resource-info">
-                      <div>CPU: {systemInfo.resources.cpuCores} cores</div>
-                      <div>Memory: {systemInfo.resources.memoryUsageMB}MB</div>
+                <div className="k8s-overview">
+                  <div className="k8s-card">
+                    <h4>📊 Cluster Information</h4>
+                    <div className="k8s-details">
+                      <div className="detail-row">
+                        <span className="label">Cluster:</span>
+                        <span className="value">{clusterInfo.cluster.name}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Namespace:</span>
+                        <span className="value">{clusterInfo.cluster.namespace}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Environment:</span>
+                        <span className="value">{clusterInfo.cluster.environment}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="runtime-card">
-                    <h4>Frontend Pods</h4>
-                    <div className="pod-status">2/2 Running</div>
+
+                  <div className="k8s-card">
+                    <h4>🔧 Backend Service</h4>
+                    <div className="k8s-details">
+                      <div className="detail-row">
+                        <span className="label">Replicas:</span>
+                        <span className="value healthy">{clusterInfo.services.backend.replicas}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Endpoint:</span>
+                        <span className="value">{clusterInfo.services.backend.endpoint}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Current Pod:</span>
+                        <span className="value code">{systemInfo.pod.name}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Node:</span>
+                        <span className="value">{systemInfo.pod.nodeName}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Pod IP:</span>
+                        <span className="value code">{systemInfo.pod.podIp}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="k8s-card">
+                    <h4>🎨 Frontend Service</h4>
+                    <div className="k8s-details">
+                      <div className="detail-row">
+                        <span className="label">Replicas:</span>
+                        <span className="value healthy">{clusterInfo.services.frontend.replicas}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Service:</span>
+                        <span className="value">{clusterInfo.services.frontend.name}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="k8s-card">
+                    <h4>💻 Resource Usage (Current Pod)</h4>
+                    <div className="k8s-details">
+                      <div className="detail-row">
+                        <span className="label">Memory:</span>
+                        <span className="value">{systemInfo.resources.memoryUsageMB} MB</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">CPU Cores:</span>
+                        <span className="value">{systemInfo.resources.cpuCores}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Threads:</span>
+                        <span className="value">{systemInfo.resources.threadCount}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">GC Memory:</span>
+                        <span className="value">{systemInfo.resources.gcMemoryMB} MB</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="k8s-card">
+                    <h4>⏱️ Health & Uptime</h4>
+                    <div className="k8s-details">
+                      <div className="detail-row">
+                        <span className="label">Status:</span>
+                        <span className="value healthy">{systemInfo.health.status}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Uptime:</span>
+                        <span className="value">{systemInfo.health.uptime}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Started:</span>
+                        <span className="value">{new Date(systemInfo.health.startTime).toLocaleString()}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Process ID:</span>
+                        <span className="value">{systemInfo.health.processId}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="k8s-card">
+                    <h4>🖥️ Platform</h4>
+                    <div className="k8s-details">
+                      <div className="detail-row">
+                        <span className="label">OS:</span>
+                        <span className="value">{systemInfo.platform.os}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Architecture:</span>
+                        <span className="value">{systemInfo.platform.architecture}</span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="label">Runtime:</span>
+                        <span className="value">{systemInfo.platform.runtime}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Collapsible: Observability */}
+          {/* 4. OBSERVABILITY - Collapsible */}
           <div className="collapsible-section">
             <div className="section-header" onClick={() => toggleSection('observability')}>
               <h3 className="section-title-small">
@@ -496,18 +609,30 @@ function App() {
             {expandedSections.observability && clusterInfo && (
               <div className="section-content">
                 <div className="observability-links">
-                  <a href={clusterInfo.observability.grafana} target="_blank" className="obs-link">
-                    <span>📈 Grafana</span>
+                  <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="obs-link">
+                    <span>📈 Grafana - Dashboards & Visualization</span>
                     <span>→</span>
                   </a>
-                  <a href={clusterInfo.observability.prometheus} target="_blank" className="obs-link">
-                    <span>⏱️ Prometheus</span>
+                  <a href={clusterInfo.observability.prometheus} target="_blank" rel="noopener noreferrer" className="obs-link">
+                    <span>⏱️ Prometheus - Metrics & Alerts</span>
                     <span>→</span>
                   </a>
-                  <a href={clusterInfo.observability.argocd} target="_blank" className="obs-link">
-                    <span>🔄 ArgoCD</span>
+                  <a href={clusterInfo.observability.argocd} target="_blank" rel="noopener noreferrer" className="obs-link">
+                    <span>🔄 ArgoCD - GitOps Deployment</span>
                     <span>→</span>
                   </a>
+                  {clusterInfo.observability.jaeger && (
+                    <a href={clusterInfo.observability.jaeger} target="_blank" rel="noopener noreferrer" className="obs-link">
+                      <span>🔍 Jaeger - Distributed Tracing</span>
+                      <span>→</span>
+                    </a>
+                  )}
+                  {clusterInfo.observability.kibana && (
+                    <a href={clusterInfo.observability.kibana} target="_blank" rel="noopener noreferrer" className="obs-link">
+                      <span>📋 Kibana - Logs & Search</span>
+                      <span>→</span>
+                    </a>
+                  )}
                 </div>
               </div>
             )}
@@ -566,4 +691,4 @@ function App() {
 }
 
 export default App
-// Build timestamp: 1765976345
+// Build timestamp: 1765976880
