@@ -271,19 +271,31 @@ jobs:
       - name: Update image tags in Helm values
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          BRANCH_NAME=${{ github.ref_name }}
+          IMAGE_TAG="${BRANCH_NAME}-${SHORT_SHA}"
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Update backend image tag
-          sed -i "s|tag: .*|tag: latest|g" helm/hellonuno/values.yaml
+          # Update backend image tag to branch-sha format (line after backend repository)
+          sed -i '/repository: ghcr.io\/nunosantos\/hellonuno\/backend/{n;s|tag: .*|tag: '"${IMAGE_TAG}"'|}' helm/hellonuno/values.yaml
+          
+          # Update frontend image tag to branch-sha format (line after frontend repository)
+          sed -i '/repository: ghcr.io\/nunosantos\/hellonuno\/frontend/{n;s|tag: .*|tag: '"${IMAGE_TAG}"'|}' helm/hellonuno/values.yaml
           
           # Update deployment metadata
           sed -i "s|commitSha: .*|commitSha: \"${{ github.sha }}\"|g" helm/hellonuno/values.yaml
-          sed -i "s|branch: .*|branch: \"${{ github.ref_name }}\"|g" helm/hellonuno/values.yaml
+          sed -i "s|branch: .*|branch: \"${BRANCH_NAME}\"|g" helm/hellonuno/values.yaml
           sed -i "s|timestamp: .*|timestamp: \"${TIMESTAMP}\"|g" helm/hellonuno/values.yaml
           sed -i "s|actor: .*|actor: \"${{ github.actor }}\"|g" helm/hellonuno/values.yaml
           
+          echo "Updated image tag to: ${IMAGE_TAG}"
+          
           # Verify changes
-          grep -A10 "deployment:" helm/hellonuno/values.yaml
+          echo "=== Backend image config ==="
+          grep -A2 "repository: ghcr.io/nunosantos/hellonuno/backend" helm/hellonuno/values.yaml
+          echo "=== Frontend image config ==="
+          grep -A2 "repository: ghcr.io/nunosantos/hellonuno/frontend" helm/hellonuno/values.yaml
+          echo "=== Deployment metadata ==="
+          grep -A5 "deployment:" helm/hellonuno/values.yaml
 
       - name: Commit and push if changed
         run: |
@@ -293,7 +305,8 @@ jobs:
           if git diff --quiet; then
             echo "No changes to commit"
           else
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
             git add helm/hellonuno/values.yaml
-            git commit -m "Update image tags to ${{ github.sha }}"
+            git commit -m "chore: update image tags to ${{ github.ref_name }}-${SHORT_SHA}"
             git push
           fi
