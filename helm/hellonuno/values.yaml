@@ -12,8 +12,8 @@ backend:
   replicaCount: 2
 
   image:
-    repository: localhost/hellonuno-backend
-    tag: latest
+    repository: ghcr.io/nunosantos/hellonuno/backend
+    tag: master-a111e1c
     pullPolicy: IfNotPresent
 
   service:
@@ -54,7 +54,7 @@ frontend:
   replicaCount: 2
 
   image:
-    repository: localhost/hellonuno-frontend
+    repository: ghcr.io/nunosantos/hellonuno/frontend
     tag: v2.0.0
     pullPolicy: Always
 
