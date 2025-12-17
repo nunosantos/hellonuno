@@ -390,3 +390,105 @@ app.Run();
 
 record HelloResponse(string Message, DateTime Timestamp, string ServerName);
 record BackendInfo(string Name, string Version, string Runtime, string Host, DateTime Timestamp);
+
+// Get DORA metrics from GitHub
+app.MapGet("/api/metrics/dora", async () => 
+{
+    try
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "HelloNuno-DevOps-Dashboard");
+        
+        var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+        if (!string.IsNullOrEmpty(githubToken))
+        {
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {githubToken}");
+        }
+
+        var owner = Environment.GetEnvironmentVariable("GITHUB_OWNER") ?? "nunosantos";
+        var repo = Environment.GetEnvironmentVariable("GITHUB_REPO") ?? "hellonuno";
+        
+        // Get workflow runs for the last 30 days
+        var since = DateTime.UtcNow.AddDays(-30).ToString("yyyy-MM-ddTHH:mm:ssZ");
+        var workflowsUrl = $"https://api.github.com/repos/{owner}/{repo}/actions/runs?created=>={since}&per_page=100";
+        var workflowsResponse = await httpClient.GetStringAsync(workflowsUrl);
+        var workflows = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(workflowsResponse);
+
+        var totalRuns = workflows.GetProperty("total_count").GetInt32();
+        var workflowArray = workflows.GetProperty("workflow_runs");
+        
+        var successCount = 0;
+        var failureCount = 0;
+        var totalDuration = TimeSpan.Zero;
+        var deployments = new List<DateTime>();
+
+        foreach (var run in workflowArray.EnumerateArray())
+        {
+            var status = run.GetProperty("status").GetString();
+            var conclusion = run.TryGetProperty("conclusion", out var concl) ? concl.GetString() : null;
+            
+            if (status == "completed")
+            {
+                if (conclusion == "success") successCount++;
+                if (conclusion == "failure") failureCount++;
+                
+                var createdAt = DateTime.Parse(run.GetProperty("created_at").GetString() ?? "");
+                var updatedAt = DateTime.Parse(run.GetProperty("updated_at").GetString() ?? "");
+                totalDuration += (updatedAt - createdAt);
+                deployments.Add(createdAt);
+            }
+        }
+
+        // Calculate DORA metrics
+        var deploymentFrequency = totalRuns / 30.0; // per day
+        var leadTime = totalRuns > 0 ? totalDuration.TotalMinutes / totalRuns : 0; // avg minutes
+        var changeFailureRate = totalRuns > 0 ? (double)failureCount / totalRuns * 100 : 0;
+        
+        // Calculate deployment velocity
+        var deploymentsLast7Days = deployments.Count(d => d > DateTime.UtcNow.AddDays(-7));
+        var deploymentsLast24Hours = deployments.Count(d => d > DateTime.UtcNow.AddDays(-1));
+
+        return Results.Ok(new
+        {
+            dora = new
+            {
+                deploymentFrequency = new
+                {
+                    perDay = Math.Round(deploymentFrequency, 2),
+                    last7Days = deploymentsLast7Days,
+                    last24Hours = deploymentsLast24Hours,
+                    rating = deploymentFrequency > 1 ? "Elite" : deploymentFrequency > 0.2 ? "High" : "Medium"
+                },
+                leadTimeForChanges = new
+                {
+                    averageMinutes = Math.Round(leadTime, 2),
+                    rating = leadTime < 60 ? "Elite" : leadTime < 1440 ? "High" : "Medium"
+                },
+                changeFailureRate = new
+                {
+                    percentage = Math.Round(changeFailureRate, 2),
+                    failures = failureCount,
+                    total = totalRuns,
+                    rating = changeFailureRate < 15 ? "Elite" : changeFailureRate < 30 ? "High" : "Medium"
+                },
+                timeToRestore = new
+                {
+                    averageMinutes = 15, // Placeholder - would need incident data
+                    rating = "High"
+                }
+            },
+            period = "Last 30 days",
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            error = "Failed to calculate DORA metrics",
+            message = ex.Message
+        }, statusCode: 500);
+    }
+})
+.WithName("GetDORAMetrics")
+.WithOpenApi();
