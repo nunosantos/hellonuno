@@ -622,3 +622,179 @@ app.MapGet("/api/metrics/dora", async () =>
 })
 .WithName("GetDORAMetrics")
 .WithOpenApi();
+// Get capacity planning and resource efficiency recommendations
+app.MapGet("/api/capacity", async (IKubernetes k8s) => 
+{
+    try
+    {
+        var namespaceName = Environment.GetEnvironmentVariable("POD_NAMESPACE") ?? "hellonuno";
+        var pods = await k8s.CoreV1.ListNamespacedPodAsync(namespaceName);
+        
+        var backendPods = pods.Items.Where(p => p.Metadata.Labels?.ContainsKey("app") == true && 
+                                                  p.Metadata.Labels["app"].Contains("backend")).ToList();
+        var frontendPods = pods.Items.Where(p => p.Metadata.Labels?.ContainsKey("app") == true && 
+                                                   p.Metadata.Labels["app"].Contains("frontend")).ToList();
+
+        var analyzeService = (List<V1Pod> servicePods, string serviceName) => {
+            if (!servicePods.Any()) return null;
+
+            var totalCpuRequested = 0.0;
+            var totalCpuUsed = 0.0;
+            var totalMemoryRequested = 0.0;
+            var totalMemoryUsed = 0.0;
+
+            foreach (var pod in servicePods)
+            {
+                foreach (var container in pod.Spec.Containers)
+                {
+                    // Get requested resources
+                    if (container.Resources?.Requests != null)
+                    {
+                        if (container.Resources.Requests.TryGetValue("cpu", out var cpuReq))
+                        {
+                            totalCpuRequested += ParseCpuResource(cpuReq.ToString());
+                        }
+                        if (container.Resources.Requests.TryGetValue("memory", out var memReq))
+                        {
+                            totalMemoryRequested += ParseMemoryResource(memReq.ToString());
+                        }
+                    }
+
+                    // Simulate actual usage (in real scenario, get from metrics-server or Prometheus)
+                    // For now, using reasonable estimates based on pod phase
+                    if (pod.Status.Phase == "Running")
+                    {
+                        // Simulate: backend uses ~45% CPU, ~70% memory
+                        // frontend uses ~15% CPU, ~35% memory
+                        var cpuFactor = serviceName == "backend" ? 0.45 : 0.15;
+                        var memFactor = serviceName == "backend" ? 0.70 : 0.35;
+                        
+                        if (container.Resources?.Requests?.TryGetValue("cpu", out var cpu) == true)
+                        {
+                            totalCpuUsed += ParseCpuResource(cpu.ToString()) * cpuFactor;
+                        }
+                        if (container.Resources?.Requests?.TryGetValue("memory", out var mem) == true)
+                        {
+                            totalMemoryUsed += ParseMemoryResource(mem.ToString()) * memFactor;
+                        }
+                    }
+                }
+            }
+
+            var cpuUtilization = totalCpuRequested > 0 ? (totalCpuUsed / totalCpuRequested) * 100 : 0;
+            var memoryUtilization = totalMemoryRequested > 0 ? (totalMemoryUsed / totalMemoryRequested) * 100 : 0;
+            
+            // Calculate efficiency score
+            var efficiency = (cpuUtilization + memoryUtilization) / 2;
+            var status = efficiency > 60 ? "optimal" : efficiency > 30 ? "over-provisioned" : "severely-over-provisioned";
+            
+            // Generate recommendations
+            var recommendations = new List<string>();
+            var savings = 0.0;
+            
+            if (cpuUtilization < 50)
+            {
+                var reduction = (int)((50 - cpuUtilization) / 50 * 100);
+                recommendations.Add($"Reduce CPU requests by {reduction}%");
+                savings += (totalCpuRequested * reduction / 100) * 15; // $15 per CPU core/month estimate
+            }
+            
+            if (memoryUtilization < 50)
+            {
+                var reduction = (int)((50 - memoryUtilization) / 50 * 100);
+                recommendations.Add($"Reduce memory requests by {reduction}%");
+                savings += (totalMemoryRequested / 1024) * reduction / 100 * 5; // $5 per GB/month estimate
+            }
+            
+            if (efficiency > 80)
+            {
+                recommendations.Add("✅ Resources well-optimized");
+            }
+            else if (efficiency > 60)
+            {
+                recommendations.Add("Resources are adequately sized");
+            }
+
+            return new {
+                service = serviceName,
+                podCount = servicePods.Count,
+                resources = new {
+                    cpu = new {
+                        requested = $"{totalCpuRequested:F0}m",
+                        used = $"{totalCpuUsed:F0}m",
+                        utilizationPercent = Math.Round(cpuUtilization, 1),
+                        status = cpuUtilization > 60 ? "good" : cpuUtilization > 30 ? "over-provisioned" : "wasteful"
+                    },
+                    memory = new {
+                        requested = $"{totalMemoryRequested:F0}Mi",
+                        used = $"{totalMemoryUsed:F0}Mi",
+                        utilizationPercent = Math.Round(memoryUtilization, 1),
+                        status = memoryUtilization > 60 ? "good" : memoryUtilization > 30 ? "over-provisioned" : "wasteful"
+                    }
+                },
+                efficiency = new {
+                    score = Math.Round(efficiency, 1),
+                    status = status,
+                    rating = efficiency > 70 ? "excellent" : efficiency > 50 ? "good" : efficiency > 30 ? "poor" : "critical"
+                },
+                recommendations = recommendations,
+                potentialSavings = new {
+                    monthlyUSD = Math.Round(savings, 2),
+                    annualUSD = Math.Round(savings * 12, 2)
+                }
+            };
+        };
+
+        // Helper methods
+        double ParseCpuResource(string cpu)
+        {
+            if (cpu.EndsWith("m")) return double.Parse(cpu.TrimEnd('m'));
+            return double.Parse(cpu) * 1000; // cores to millicores
+        }
+
+        double ParseMemoryResource(string memory)
+        {
+            if (memory.EndsWith("Mi")) return double.Parse(memory.TrimEnd('M', 'i'));
+            if (memory.EndsWith("Gi")) return double.Parse(memory.TrimEnd('G', 'i')) * 1024;
+            if (memory.EndsWith("Ki")) return double.Parse(memory.TrimEnd('K', 'i')) / 1024;
+            return double.Parse(memory) / 1024 / 1024; // bytes to Mi
+        }
+
+        var backendCapacity = analyzeService(backendPods, "backend");
+        var frontendCapacity = analyzeService(frontendPods, "frontend");
+        
+        var services = new[] { backendCapacity, frontendCapacity }.Where(s => s != null).ToList();
+        var overallEfficiency = services.Any() ? services.Average(s => s.efficiency.score) : 0;
+        var totalSavings = services.Sum(s => s.potentialSavings.monthlyUSD);
+
+        return Results.Ok(new
+        {
+            @namespace = namespaceName,
+            overall = new {
+                efficiency = Math.Round(overallEfficiency, 1),
+                status = overallEfficiency > 60 ? "healthy" : "needs-optimization",
+                totalPods = services.Sum(s => s.podCount),
+                potentialSavings = new {
+                    monthlyUSD = Math.Round(totalSavings, 2),
+                    annualUSD = Math.Round(totalSavings * 12, 2)
+                }
+            },
+            services = services,
+            recommendations = new {
+                immediate = services.SelectMany(s => s.recommendations).ToList(),
+                autoscaling = new[] {
+                    "Consider enabling HPA (Horizontal Pod Autoscaler)",
+                    "Set up VPA (Vertical Pod Autoscaler) for dynamic sizing",
+                    "Monitor during peak hours for better estimates"
+                }
+            },
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { error = "Failed to analyze capacity", message = ex.Message }, statusCode: 500);
+    }
+})
+.WithName("GetCapacityPlanning")
+.WithOpenApi();

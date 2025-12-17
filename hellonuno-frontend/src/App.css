@@ -1011,3 +1011,287 @@
   color: var(--bg-primary);
   transform: translateY(-2px);
 }
+
+/* ========================================
+   MOBILE-FIRST RESPONSIVE DESIGN
+   ======================================== */
+
+/* Mobile base styles (default) */
+.container {
+  padding: 1rem;
+}
+
+/* Touch-friendly interactive elements */
+button, a.info-card, .clickable {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Collapsible sections for mobile */
+.collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.expanded {
+  max-height: 2000px;
+}
+
+/* Mobile navigation */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-links {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.nav-links::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-link {
+  white-space: nowrap;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+/* Service grid - stack on mobile */
+.service-grid {
+  grid-template-columns: 1fr;
+}
+
+/* Info cards - stack on mobile */
+.info-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+/* Service cards - full width on mobile */
+.service-card {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+/* Hide less critical info on small screens */
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none;
+  }
+  
+  .service-detail-label {
+    font-size: 0.75rem;
+  }
+  
+  .service-detail-value {
+    font-size: 0.75rem;
+  }
+  
+  .section-subtitle {
+    font-size: 0.875rem;
+  }
+  
+  /* Priority ordering for mobile */
+  .mobile-priority-1 { order: 1; }
+  .mobile-priority-2 { order: 2; }
+  .mobile-priority-3 { order: 3; }
+  
+  /* Compact pod list */
+  .pod-info {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+
+/* Tablet (768px and up) */
+@media (min-width: 768px) {
+  .container {
+    padding: 2rem;
+  }
+  
+  .info-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .service-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop (1024px and up) */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .info-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .service-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Large desktop (1440px and up) */
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1400px;
+  }
+  
+  .info-cards {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Swipe gesture indicators */
+.swipeable {
+  touch-action: pan-y;
+  position: relative;
+}
+
+.swipeable::after {
+  content: '←→ Swipe';
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+@media (min-width: 768px) {
+  .swipeable::after {
+    display: none;
+  }
+}
+
+/* High contrast mode for alerts */
+.alert-critical {
+  background: rgba(239, 68, 68, 0.2);
+  border-left: 4px solid #ef4444;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  animation: pulse-alert 2s infinite;
+}
+
+@keyframes pulse-alert {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+/* Loading states for mobile */
+.skeleton {
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0.05) 25%, 
+    rgba(255,255,255,0.1) 50%, 
+    rgba(255,255,255,0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 8px;
+  height: 60px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Capacity status indicators */
+.capacity-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.capacity-status.excellent {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.capacity-status.good {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.capacity-status.poor {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.capacity-status.critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Resource meters */
+.resource-meter {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.resource-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #3b82f6);
+  transition: width 0.5s ease;
+  border-radius: 4px;
+}
+
+.resource-meter-fill.over-provisioned {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.resource-meter-fill.wasteful {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+/* Savings indicator */
+.savings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Print styles */
+@media print {
+  .nav, .footer, button, .clickable {
+    display: none;
+  }
+  
+  .service-card {
+    page-break-inside: avoid;
+  }
+}
