@@ -1,0 +1,84 @@
+version: 2
+updates:
+  # Enable version updates for npm (frontend)
+  - package-ecosystem: "npm"
+    directory: "/hellonuno-frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "automated"
+    commit-message:
+      prefix: "npm"
+      include: "scope"
+    reviewers:
+      - "${{ github.repository_owner }}"
+    assignees:
+      - "${{ github.repository_owner }}"
+
+  # Enable version updates for NuGet (backend)
+  - package-ecosystem: "nuget"
+    directory: "/hellonuno-backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "backend"
+      - "automated"
+    commit-message:
+      prefix: "nuget"
+      include: "scope"
+    reviewers:
+      - "${{ github.repository_owner }}"
+    assignees:
+      - "${{ github.repository_owner }}"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/hellonuno-backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "backend"
+      - "automated"
+    commit-message:
+      prefix: "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/hellonuno-frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "frontend"
+      - "automated"
+    commit-message:
+      prefix: "docker"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"
+    commit-message:
+      prefix: "github-actions"
