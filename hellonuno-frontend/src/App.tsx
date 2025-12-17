@@ -312,6 +312,402 @@ function App() {
         />
       </div>
 
+      {/* Side Panel for Stage Details */}
+      {selectedStage && (
+        <div className="stage-panel">
+          <div className="panel-header">
+            <h3 className="panel-title">
+              {selectedStage === 'code' && 'Code Stage'}
+              {selectedStage === 'build' && 'Build Stage'}
+              {selectedStage === 'test' && 'Test Stage'}
+              {selectedStage === 'deploy' && 'Deploy Stage'}
+              {selectedStage === 'runtime-dev' && 'Dev Runtime'}
+              {selectedStage === 'runtime-staging' && 'Staging Runtime'}
+              {selectedStage === 'runtime-prod' && 'Production Runtime'}
+            </h3>
+            <button className="panel-close" onClick={() => setSelectedStage(null)}>×</button>
+          </div>
+
+          <div className="panel-body">
+            {/* Code Stage Details */}
+            {selectedStage === 'code' && (changelog || pipelineInfo) && (
+              <>
+                <div className="panel-section">
+                  <h4>Git Commit</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="label">SHA:</span>
+                      <span className="value code">{changelog?.deployed.sha || pipelineInfo?.trigger.commitSha?.substring(0, 7)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Message:</span>
+                      <span className="value">"{changelog?.deployed.message || 'N/A'}"</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Author:</span>
+                      <span className="value">{changelog?.deployed.author || pipelineInfo?.trigger.actor}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Time:</span>
+                      <span className="value">{changelog ? new Date(changelog.deployed.deployedAt).toLocaleString() : 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+                {pipelineInfo && (
+                  <div className="panel-section">
+                    <h4>Trigger Info</h4>
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <span className="label">Event:</span>
+                        <span className="value badge">{pipelineInfo.trigger.event}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="label">Branch:</span>
+                        <span className="value code">{pipelineInfo.trigger.branch}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="label">Triggered by:</span>
+                        <span className="value">{pipelineInfo.trigger.actor}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="panel-actions">
+                  {changelog && (
+                    <a href={changelog.deployed.url} target="_blank" rel="noopener noreferrer" className="panel-btn primary">
+                      View on GitHub →
+                    </a>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Build Stage Details */}
+            {selectedStage === 'build' && pipelineInfo && (
+              <>
+                <div className="panel-section">
+                  <h4>Build Status</h4>
+                  <div className="status-list">
+                    <div className={`status-item ${pipelineInfo.build.status}`}>
+                      <span className="status-icon">{pipelineInfo.build.status === 'success' ? '✓' : '✗'}</span>
+                      <span>Docker Build: {pipelineInfo.build.status === 'success' ? 'Success' : 'Failed'}</span>
+                    </div>
+                  </div>
+                  <div className="detail-grid" style={{marginTop: '1rem'}}>
+                    <div className="detail-item">
+                      <span className="label">Duration:</span>
+                      <span className="value">{pipelineInfo.build.duration}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Image Tag:</span>
+                      <span className="value code">{pipelineInfo.build.imageTag}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Registry:</span>
+                      <span className="value">{pipelineInfo.build.registry}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Full Image:</span>
+                      <span className="value code" style={{fontSize: '0.7rem'}}>{pipelineInfo.build.imageName}:{pipelineInfo.build.imageTag}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Platform:</span>
+                      <span className="value">{pipelineInfo.build.platform}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Dockerfile:</span>
+                      <span className="value code">{pipelineInfo.build.dockerfile}</span>
+                    </div>
+                  </div>
+                </div>
+                {pipelineInfo.pipeline.url && (
+                  <div className="panel-actions">
+                    <a href={pipelineInfo.pipeline.url} target="_blank" rel="noopener noreferrer" className="panel-btn primary">
+                      View Build Logs →
+                    </a>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Test Stage Details */}
+            {selectedStage === 'test' && pipelineInfo && (
+              <>
+                <div className="panel-section">
+                  <h4>Test Results</h4>
+                  <div className="test-summary">
+                    <div className="test-stat">
+                      <span className="test-number success">{pipelineInfo.test.passed}</span>
+                      <span className="test-label">Passed</span>
+                    </div>
+                    <div className="test-stat">
+                      <span className="test-number failed">{pipelineInfo.test.failed}</span>
+                      <span className="test-label">Failed</span>
+                    </div>
+                    <div className="test-stat">
+                      <span className="test-number skipped">{pipelineInfo.test.skipped}</span>
+                      <span className="test-label">Skipped</span>
+                    </div>
+                    <div className="test-stat">
+                      <span className="test-number total">{pipelineInfo.test.total}</span>
+                      <span className="test-label">Total</span>
+                    </div>
+                  </div>
+                  <div className="detail-grid" style={{marginTop: '1rem'}}>
+                    <div className="detail-item">
+                      <span className="label">Duration:</span>
+                      <span className="value">{pipelineInfo.test.duration}</span>
+                    </div>
+                    {pipelineInfo.test.coverage && (
+                      <div className="detail-item">
+                        <span className="label">Coverage:</span>
+                        <span className="value">{pipelineInfo.test.coverage}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="panel-section">
+                  <h4>Security Scan</h4>
+                  <div className="status-list">
+                    <div className={`status-item ${pipelineInfo.test.securityScan.status}`}>
+                      <span className="status-icon">{pipelineInfo.test.securityScan.status === 'success' ? '✓' : '⚠'}</span>
+                      <span>Vulnerability Scan: {pipelineInfo.test.securityScan.status === 'success' ? 'Passed' : 'Issues Found'}</span>
+                    </div>
+                  </div>
+                  <div className="vuln-summary">
+                    <span className="vuln critical">Critical: {pipelineInfo.test.securityScan.vulnerabilities.critical}</span>
+                    <span className="vuln high">High: {pipelineInfo.test.securityScan.vulnerabilities.high}</span>
+                    <span className="vuln medium">Medium: {pipelineInfo.test.securityScan.vulnerabilities.medium}</span>
+                    <span className="vuln low">Low: {pipelineInfo.test.securityScan.vulnerabilities.low}</span>
+                  </div>
+                </div>
+                <div className="panel-section">
+                  <h4>Linting</h4>
+                  <div className="status-list">
+                    <div className={`status-item ${pipelineInfo.test.linting.status}`}>
+                      <span className="status-icon">{pipelineInfo.test.linting.status === 'success' ? '✓' : '⚠'}</span>
+                      <span>Errors: {pipelineInfo.test.linting.errors} | Warnings: {pipelineInfo.test.linting.warnings}</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Deploy Stage Details */}
+            {selectedStage === 'deploy' && (pipelineInfo || (changelog && clusterInfo)) && (
+              <>
+                <div className="panel-section">
+                  <h4>Deployment Info</h4>
+                  <div className="detail-grid">
+                    {changelog && (
+                      <>
+                        <div className="detail-item">
+                          <span className="label">Deployed At:</span>
+                          <span className="value">{new Date(changelog.deployed.deployedAt).toLocaleString()}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Deployed By:</span>
+                          <span className="value">{changelog.deployed.deployedBy}</span>
+                        </div>
+                      </>
+                    )}
+                    {pipelineInfo && (
+                      <>
+                        <div className="detail-item">
+                          <span className="label">Method:</span>
+                          <span className="value">{pipelineInfo.deploy.method}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Strategy:</span>
+                          <span className="value">{pipelineInfo.deploy.strategy}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Sync Status:</span>
+                          <span className={`value badge ${pipelineInfo.deploy.syncStatus.toLowerCase()}`}>{pipelineInfo.deploy.syncStatus}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Health:</span>
+                          <span className={`value badge ${pipelineInfo.deploy.healthStatus.toLowerCase()}`}>{pipelineInfo.deploy.healthStatus}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Current Rev:</span>
+                          <span className="value code">{pipelineInfo.deploy.revision}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Previous Rev:</span>
+                          <span className="value code">{pipelineInfo.deploy.previousRevision}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {pipelineInfo?.pipeline.totalDuration && (
+                  <div className="panel-section">
+                    <h4>Pipeline Summary</h4>
+                    <div className="detail-grid">
+                      <div className="detail-item">
+                        <span className="label">Total Duration:</span>
+                        <span className="value">{pipelineInfo.pipeline.totalDuration}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="label">Run #:</span>
+                        <span className="value">{pipelineInfo.pipeline.runNumber}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="label">Workflow:</span>
+                        <span className="value">{pipelineInfo.pipeline.workflowName}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="panel-actions">
+                  {clusterInfo && (
+                    <a href={clusterInfo.observability.argocd} target="_blank" rel="noopener noreferrer" className="panel-btn primary">
+                      Open ArgoCD →
+                    </a>
+                  )}
+                  {pipelineInfo?.pipeline.url && (
+                    <a href={pipelineInfo.pipeline.url} target="_blank" rel="noopener noreferrer" className="panel-btn secondary">
+                      View Pipeline →
+                    </a>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Dev Runtime Stage Details */}
+            {selectedStage === 'runtime-dev' && systemInfo && clusterInfo && (
+              <>
+                <div className="panel-section">
+                  <h4>Environment: Development</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="label">Cluster:</span>
+                      <span className="value">{clusterInfo.cluster.name}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Namespace:</span>
+                      <span className="value code">{clusterInfo.cluster.namespace}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Backend:</span>
+                      <span className="value">{clusterInfo.services.backend.replicas}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Frontend:</span>
+                      <span className="value">{clusterInfo.services.frontend.replicas}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h4>Kubernetes Pod Info</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="label">Pod:</span>
+                      <span className="value code" style={{fontSize: '0.7rem'}}>{systemInfo.pod.name}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Pod IP:</span>
+                      <span className="value code">{systemInfo.pod.podIp}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Node:</span>
+                      <span className="value">{systemInfo.pod.nodeName}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Service Account:</span>
+                      <span className="value code">{systemInfo.pod.serviceAccount}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h4>Resource Usage</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="label">Memory:</span>
+                      <span className="value">{systemInfo.resources.memoryUsageMB.toFixed(1)} MB</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">CPU Cores:</span>
+                      <span className="value">{systemInfo.resources.cpuCores}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Threads:</span>
+                      <span className="value">{systemInfo.resources.threadCount}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Uptime:</span>
+                      <span className="value">{systemInfo.health.uptime}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h4>Platform</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="label">OS:</span>
+                      <span className="value">{systemInfo.platform.os}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Architecture:</span>
+                      <span className="value">{systemInfo.platform.architecture}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="label">Runtime:</span>
+                      <span className="value">{systemInfo.platform.runtime}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel-section">
+                  <h4>Observability Links</h4>
+                  <div className="observability-links-panel">
+                    <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="obs-link-small">
+                      📈 Grafana
+                    </a>
+                    <a href={clusterInfo.observability.prometheus} target="_blank" rel="noopener noreferrer" className="obs-link-small">
+                      ⏱️ Prometheus
+                    </a>
+                    <a href={clusterInfo.observability.argocd} target="_blank" rel="noopener noreferrer" className="obs-link-small">
+                      🔄 ArgoCD
+                    </a>
+                    {clusterInfo.observability.jaeger && (
+                      <a href={clusterInfo.observability.jaeger} target="_blank" rel="noopener noreferrer" className="obs-link-small">
+                        🔍 Jaeger
+                      </a>
+                    )}
+                    {clusterInfo.observability.kibana && (
+                      <a href={clusterInfo.observability.kibana} target="_blank" rel="noopener noreferrer" className="obs-link-small">
+                        📋 Kibana
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div className="panel-actions">
+                  <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="panel-btn primary">
+                    View Metrics →
+                  </a>
+                </div>
+              </>
+            )}
+
+            {/* Staging/Prod Runtime - Placeholder */}
+            {(selectedStage === 'runtime-staging' || selectedStage === 'runtime-prod') && (
+              <div className="panel-section">
+                <h4>Environment: {selectedStage === 'runtime-staging' ? 'Staging' : 'Production'}</h4>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+                  This environment will be available when you configure additional ArgoCD applications.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* HIDDEN: Hero Section */}
       <section id="home" className="hero" style={{display: 'none'}}>
         <div className="hero-background">
