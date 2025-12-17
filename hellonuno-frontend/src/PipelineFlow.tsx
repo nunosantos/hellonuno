@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 import {
   ReactFlow,
   Background,
@@ -230,8 +230,13 @@ export default function PipelineFlow({ changelog, systemInfo, pipelineInfo, onNo
     },
   ], [])
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes)
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
+
+  // Update nodes when data changes
+  useEffect(() => {
+    setNodes(initialNodes)
+  }, [initialNodes, setNodes])
 
   const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     onNodeClick(node.id)

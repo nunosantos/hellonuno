@@ -172,7 +172,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [, setActiveSection] = useState('home')
+  const [activeSection, setActiveSection] = useState('home')
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     build: false,
     runtime: false,
@@ -272,7 +272,7 @@ function App() {
   }
 
   return (
-    <div className="app pipeline-app">
+    <div className="app">
       {/* Navigation */}
       <nav className="navbar">
         <div className="nav-container">
@@ -297,23 +297,16 @@ function App() {
           </button>
 
           <ul className={`nav-menu ${mobileMenuOpen ? 'active' : ''}`}>
-            <li><span className="nav-title">Deployment Pipeline</span></li>
+            <li><a href="#home" className={activeSection === 'home' ? 'active' : ''} onClick={() => scrollToSection('home')}>Home</a></li>
+            <li><a href="#features" className={activeSection === 'features' ? 'active' : ''} onClick={() => scrollToSection('features')}>Features</a></li>
+            <li><a href="#try-it" className={activeSection === 'try-it' ? 'active' : ''} onClick={() => scrollToSection('try-it')}>Try It</a></li>
+            <li><a href="#system" className={activeSection === 'system' ? 'active' : ''} onClick={() => scrollToSection('system')}>System Info</a></li>
           </ul>
         </div>
       </nav>
 
-      {/* Full Page Pipeline Canvas */}
-      <div className="pipeline-canvas-wrapper">
-        <PipelineFlow
-          changelog={changelog}
-          systemInfo={systemInfo}
-          pipelineInfo={pipelineInfo}
-          onNodeClick={(nodeId) => setSelectedStage(nodeId)}
-        />
-      </div>
-
-      {/* HIDDEN: Hero Section */}
-      <section id="home" className="hero" style={{display: 'none'}}>
+      {/* Hero Section */}
+      <section id="home" className="hero">
         <div className="hero-background">
           <div className="gradient-orb orb-1"></div>
           <div className="gradient-orb orb-2"></div>
@@ -344,8 +337,8 @@ function App() {
         </div>
       </section>
 
-      {/* HIDDEN: Features Section */}
-      <section id="features" className="features" style={{display: 'none'}}>
+      {/* Features Section */}
+      <section id="features" className="features">
         <div className="container">
           <h2 className="section-title">Powered by Modern Technology</h2>
           <p className="section-subtitle">A showcase of cloud-native architecture and containerization</p>
@@ -399,8 +392,8 @@ function App() {
         </div>
       </section>
 
-      {/* HIDDEN: Try It Section */}
-      <section id="try-it" className="try-it" style={{display: 'none'}}>
+      {/* Try It Section */}
+      <section id="try-it" className="try-it">
         <div className="container">
           <div className="try-it-content">
             <div className="try-it-header">
@@ -466,8 +459,8 @@ function App() {
         </div>
       </section>
 
-      {/* HIDDEN: System Info Section - Sequential Flow with REAL Data */}
-      <section id="system" className="system-info" style={{display: 'none'}}>
+      {/* System Info Section - Sequential Flow with REAL Data */}
+      <section id="system" className="system-info">
         <div className="container">
           <h2 className="section-title">Deployment Pipeline</h2>
           <p className="section-subtitle">Visual workflow from code to production</p>
@@ -765,12 +758,14 @@ function App() {
                           <span className="label">Frontend:</span>
                           <span className="value">{clusterInfo.services.frontend.replicas}</span>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="panel-section">
-                      <h4>Kubernetes Pod Info</h4>
-                      <div className="detail-grid">
+                        <div className="detail-item">
+                          <span className="label">Memory:</span>
+                          <span className="value">{systemInfo.resources.memoryUsageMB.toFixed(1)} MB</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="label">Uptime:</span>
+                          <span className="value">{systemInfo.health.uptime}</span>
+                        </div>
                         <div className="detail-item">
                           <span className="label">Pod:</span>
                           <span className="value code" style={{fontSize: '0.7rem'}}>{systemInfo.pod.name}</span>
@@ -779,82 +774,8 @@ function App() {
                           <span className="label">Pod IP:</span>
                           <span className="value code">{systemInfo.pod.podIp}</span>
                         </div>
-                        <div className="detail-item">
-                          <span className="label">Node:</span>
-                          <span className="value">{systemInfo.pod.nodeName}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="label">Service Account:</span>
-                          <span className="value code">{systemInfo.pod.serviceAccount}</span>
-                        </div>
                       </div>
                     </div>
-
-                    <div className="panel-section">
-                      <h4>Resource Usage</h4>
-                      <div className="detail-grid">
-                        <div className="detail-item">
-                          <span className="label">Memory:</span>
-                          <span className="value">{systemInfo.resources.memoryUsageMB.toFixed(1)} MB</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="label">CPU Cores:</span>
-                          <span className="value">{systemInfo.resources.cpuCores}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="label">Threads:</span>
-                          <span className="value">{systemInfo.resources.threadCount}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="label">Uptime:</span>
-                          <span className="value">{systemInfo.health.uptime}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="panel-section">
-                      <h4>Platform</h4>
-                      <div className="detail-grid">
-                        <div className="detail-item">
-                          <span className="label">OS:</span>
-                          <span className="value">{systemInfo.platform.os}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="label">Architecture:</span>
-                          <span className="value">{systemInfo.platform.architecture}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="label">Runtime:</span>
-                          <span className="value">{systemInfo.platform.runtime}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="panel-section">
-                      <h4>Observability Links</h4>
-                      <div className="observability-links-panel">
-                        <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="obs-link-small">
-                          📈 Grafana
-                        </a>
-                        <a href={clusterInfo.observability.prometheus} target="_blank" rel="noopener noreferrer" className="obs-link-small">
-                          ⏱️ Prometheus
-                        </a>
-                        <a href={clusterInfo.observability.argocd} target="_blank" rel="noopener noreferrer" className="obs-link-small">
-                          🔄 ArgoCD
-                        </a>
-                        {clusterInfo.observability.jaeger && (
-                          <a href={clusterInfo.observability.jaeger} target="_blank" rel="noopener noreferrer" className="obs-link-small">
-                            🔍 Jaeger
-                          </a>
-                        )}
-                        {clusterInfo.observability.kibana && (
-                          <a href={clusterInfo.observability.kibana} target="_blank" rel="noopener noreferrer" className="obs-link-small">
-                            📋 Kibana
-                          </a>
-                        )}
-                      </div>
-                    </div>
-
                     <div className="panel-actions">
                       <a href={clusterInfo.observability.grafana} target="_blank" rel="noopener noreferrer" className="panel-btn primary">
                         View Metrics →
@@ -1134,8 +1055,8 @@ function App() {
         </div>
       </section>
 
-      {/* HIDDEN: Footer */}
-      <footer className="footer" style={{display: 'none'}}>
+      {/* Footer */}
+      <footer className="footer">
         <div className="container">
           <div className="footer-content">
             <div className="footer-section">

@@ -9,6 +9,61 @@
   overflow: hidden;
 }
 
+/* Full page pipeline canvas */
+.pipeline-app .pipeline-flow-container {
+  height: calc(100vh - 80px);
+  border-radius: 0;
+  border: none;
+  margin-bottom: 0;
+}
+
+.pipeline-canvas-wrapper {
+  width: 100%;
+  height: calc(100vh - 80px);
+  position: relative;
+}
+
+.pipeline-canvas-wrapper .pipeline-flow-container {
+  height: 100%;
+  border-radius: 0;
+  border: none;
+  margin-bottom: 0;
+}
+
+/* Observability links in side panel */
+.observability-links-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.obs-link-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  border-radius: 6px;
+  color: #a78bfa;
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.obs-link-small:hover {
+  background: rgba(147, 51, 234, 0.25);
+  border-color: rgba(147, 51, 234, 0.5);
+  color: #c4b5fd;
+}
+
+/* Nav title style */
+.nav-title {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 /* Custom Node Styling */
 .pipeline-flow-node {
   display: flex;
